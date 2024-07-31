@@ -1,0 +1,2 @@
+### S-Vid Player
+Video Player For Kaios 2.5.x. Fast Forward, Smooth Effect, Search Video, Jump To Video Using Numpad, Zoom In/Out, Rotate Video As Per Choise, Videos List, Last PlayBack, Assaigned With Filemanager, Minimize Video, Play As Fullscreen, Mute/Unmute, Subtitle On/off, Varius Subtitle File Support webvtt, *.vtt, *.srt, Advance Features And Many Others Features Are Available. Download And Enjoy.
