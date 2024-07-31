@@ -1,0 +1,69 @@
+{
+  "name": "S-Vid Player",
+  "description": "Video Player For Kaios 2.5.x. Fast Forward, Smooth Effect, Search Video, Jump To Video Using Numpad, Zoom In/Out, Rotate Video As Per Choise, Videos List, Last PlayBack, Assaigned With Filemanager, Minimize Video, Play As Fullscreen, Mute/Unmute, Subtitle On/off, Varius Subtitle File Support webvtt, *.vtt, *.srt, Advance Features And Many Others Features Are Available. Download And Enjoy.",
+  "type": "privileged",
+  "launch_path": "/index.html",
+  "developer": {
+    "name": "shifat100",
+    "url": "https://shifat100.xtgem.com"
+  },
+  "origin": "app://s-vid.player",
+  "fullscreen": true,
+  "permissions": {
+    "themeable": {},
+    "storage": {},
+    "audio-channel-content": {},
+    "nfc-share": {},
+    "xhr": {},
+    "device-storage:sdcard": {
+      "access": "readwrite"
+    },
+    "device-storage:sdcard1": {
+      "access": "readwrite"
+    }
+  },
+  "locales": {
+    "en-US": {
+      "name": "S-Vid Player",
+      "description": "Video Player For Kaios 2.5.x. Fast Forward, Smooth Effect, Search Video, Jump To Video Using Numpad, Zoom In/Out, Rotate Video As Per Choise, Videos List, Last PlayBack, Assaigned With Filemanager, Minimize Video, Play As Fullscreen, Mute/Unmute, Subtitle On/off, Varius Subtitle File Support webvtt, *.vtt, *.srt, Advance Features And Many Others Features Are Available. Download And Enjoy."
+    }
+  },
+  "default_locale": "en-US",
+  "icons": {
+    "56": "/icons/ic-56.png",
+    "112": "/icons/ic-112.png",
+    "128": "/icons/ic-128.png"
+  },
+  "activities": {
+    "view": {
+      "filters": {
+        "type": [
+          "video/webm",
+          "video/mp4",
+          "video/3gpp",
+          "video/3gpp2",
+          "video/ogg"
+        ]
+      },
+      "href": "view.html",
+      "disposition": "inline",
+      "returnValue": true
+    },
+    "open": {
+      "filters": {
+        "type": [
+          "video/webm",
+          "video/mp4",
+          "video/3gpp",
+          "video/3gpp2",
+          "video/ogg"
+        ]
+      },
+      "href": "view.html",
+      "disposition": "inline",
+      "returnValue": true
+    }
+  },
+  "version": "1.0",
+  "cursor": false
+}
