@@ -4,29 +4,10 @@ try {
     }
     function fileExtention(filename) {
         var fsplit = filename.split(".");
-        var extention = fsplit[fsplit.length - 1];
+        var extention = fsplit[fsplit.length-1];
         return extention;
     }
-
-    function gup(name, loc = window.location.href) { name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]"); var regexS = "[\\?&]" + name + "=([^&#]*)"; var regex = new RegExp(regexS); var results = regex.exec(loc); if (results == null) return ""; else return results[1]; }
-
-
-    function insertUrlParam(key, value) {
-        if (history.pushState) {
-            let searchParams = new URLSearchParams(window.location.search);
-            searchParams.set(key, value);
-            let newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + searchParams.toString();
-            window.history.pushState({ path: newurl }, '', newurl);
-        }
-    }
-
-    function removeUrlParameter(paramKey) {
-        const url = window.location.href;
-        var r = new URL(url);
-        r.searchParams.delete(paramKey);
-        const newUrl = r.href;
-        window.history.pushState({ path: newUrl }, '', newUrl);
-    }
+    
 
     function playVid(originalBlob) {
         var blob = new Blob([originalBlob], { type: 'video/mp4' });
@@ -45,8 +26,6 @@ try {
         var issub = false;
         var subon = true;
         var ispaused = false;
-        // var playingindex = filenamearray.indexOf(baseFileName(originalBlob.name));
-        var tstime = 0;
 
         header.innerHTML = baseFileName(originalBlob.name);
         app.style = 'background-color: black;';
@@ -65,28 +44,13 @@ try {
         /*vp.mozAudioChannelType = 'content';*/
         var subtitleBar = document.getElementById('subtitle');
 
-        if (gup("ref") == "filelist") {
-            if (localStorage.getItem(filename) != null) {
-                vp.pause();
-                if (window.confirm("Resume Previous Playback ?")) {
-                    vp.currentTime = localStorage.getItem(filename);
-                    vp.play();
-                } else {
-                    vp.currentTime = 0;
-                    vp.play();
-                }
-            }
-        } else {
-            if (localStorage.getItem(filename) != null) {
-                vp.pause();
+        if (localStorage.getItem(filename) != null) {
+            vp.pause();
+            if (window.confirm('Resume Previous Playback ?')) {
                 vp.currentTime = localStorage.getItem(filename);
                 vp.play();
-            } else {
-                vp.currentTime = 0;
-                vp.play();
-            }
+            } else { vp.currentTime = 0; vp.play(); }
         }
-
 
 
 
@@ -176,52 +140,52 @@ try {
             return null;
         }
 
-        // navigator.getDeviceStorages('sdcard').forEach(sdcard => {
-        //     var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.vtt'));
+        navigator.getDeviceStorages('sdcard').forEach(sdcard => {
+            var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.vtt'));
 
-        //     request.onsuccess = function () {
-        //         var fileReader = new FileReader();
-        //         fileReader.onload = function () {
-        //             subon = true;
-        //             issub = true;
-        //             var data = fileReader.result;
-        //             subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-        //             var subtitles = parseVTT(data);
-        //             vp.addEventListener('timeupdate', () => {
-        //                 var currentTime = vp.currentTime;
-        //                 var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
-        //                 subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
-        //             });
-        //         }
-        //         fileReader.readAsText(request.result);
-        //     }
-        //     request.onerror = function () {
-        //         var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.srt'));
+            request.onsuccess = function () {
+                var fileReader = new FileReader();
+                fileReader.onload = function () {
+                    subon = true;
+                    issub = true;
+                    var data = fileReader.result;
+                    subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
+                    var subtitles = parseVTT(data);
+                    vp.addEventListener('timeupdate', () => {
+                        var currentTime = vp.currentTime;
+                        var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
+                        subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
+                    });
+                }
+                fileReader.readAsText(request.result);
+            }
+            request.onerror = function () {
+                var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.srt'));
 
-        //         request1.onsuccess = function () {
-        //             var fileReader = new FileReader();
-        //             fileReader.onload = function () {
-        //                 subon = true;
-        //                 issub = true;
-        //                 var data = fileReader.result;
-        //                 subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-        //                 var subtitles = parseVTT(data);
-        //                 vp.addEventListener('timeupdate', () => {
-        //                     var currentTime = vp.currentTime;
-        //                     var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
-        //                     subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
-        //                 });
-        //             }
+                request1.onsuccess = function () {
+                    var fileReader = new FileReader();
+                    fileReader.onload = function () {
+                        subon = true;
+                        issub = true;
+                        var data = fileReader.result;
+                        subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
+                        var subtitles = parseVTT(data);
+                        vp.addEventListener('timeupdate', () => {
+                            var currentTime = vp.currentTime;
+                            var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
+                            subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
+                        });
+                    }
 
-        //             fileReader.readAsText(request1.result);
-        //         }
-        //         request1.onerror = function () {
-        //             subon = false;
-        //             issub = false;
-        //             subtitleBar.style.display = 'none';
-        //         };
-        //     };
-        // });
+                    fileReader.readAsText(request1.result);
+                }
+                request1.onerror = function () {
+                    subon = false;
+                    issub = false;
+                    subtitleBar.style.display = 'none';
+                };
+            };
+        });
 
         function zero() {
             var e = document.createElement('div');
@@ -236,13 +200,11 @@ try {
                 hideFile(originalBlob);
                 document.body.removeEventListener('keydown', keydownzero);
                 document.body.addEventListener('keydown', keydownmain);
-                document.body.addEventListener('keyup', keyupmain);
             });
 
 
             document.querySelectorAll('.zerolist')[0].focus();
             document.body.removeEventListener('keydown', keydownmain);
-            document.body.removeEventListener('keyup', keyupmain);
             document.body.addEventListener('keydown', keydownzero);
         }
 
@@ -258,7 +220,6 @@ try {
 
             document.body.removeEventListener('keydown', keydownzero);
             document.body.addEventListener('keydown', keydownmain);
-            document.body.addEventListener('keyup', keyupmain);
         }
 
         function settings() {
@@ -309,8 +270,13 @@ try {
             document.body.addEventListener('keydown', keydownsetting);
         }
 
+        function exportVideo() {
+            document.body.removeChild(document.querySelector('#zerobar'));
+            alert('coming Soon');
+            document.body.addEventListener('keydown', keydownmain);
+        }
+
         document.body.addEventListener('keydown', keydownmain);
-        document.body.addEventListener('keyup', keyupmain);
 
         function keydownmain(e) {
             if (e.key == 'Enter') { if (vp.paused) { vp.play(); f2.innerHTML = 'Pause'; showToast('Playback Resumed'); ispaused = false; } else { vp.pause(); f2.innerHTML = 'Play'; showToast('Playback Paused'); ispaused = true; } }
@@ -321,14 +287,14 @@ try {
             if (e.key == '1') { vp.playbackRate -= 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
             if (e.key == '2') { vp.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
             if (e.key == '3') { vp.playbackRate += 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
-            if (e.key == '4') { tstime = new Date().getTime(); }
+            if (e.key == '4') { rotateVid(-10); }
             if (e.key == '5') { defaultScreen(); showToast('Default Playback'); }
-            if (e.key == '6') { tstime = new Date().getTime(); }
+            if (e.key == '6') { rotateVid(+10); }
             if (e.key == '7') {
                 if (gup('act', window.location.href) == 'hidden') {
                     window.location.href = '/hidden.html';
                 } else {
-                    window.location.href = '/files.html?ref=filelist';
+                    window.location.href = '/files.html';
                 }
             }
             if (e.key == '8') {
@@ -340,7 +306,7 @@ try {
                     }
                 } else { showToast('No Subtitle Found'); }
             }
-            if (e.key == '9') { tstime = new Date().getTime(); }
+            if (e.key == '9') { var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 60 * 60) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); } }
             if (e.key == '*') { zoomOut(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
             if (e.key == '#' || e.key == '/') { zoomIn(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
             if (e.key == '0') { zero(); }
@@ -366,45 +332,6 @@ try {
             }
         }
 
-        function keyupmain(e) {
-            if (e.key == "4") {
-                if ((new Date().getTime() - tstime) < 1000) {
-                    rotateVid(-10);
-                } else {
-                    if ((playingindex - 1) > -1 && playingindex != -1) {
-                        removeUrlParameter('ref');
-                        playingindex = playingindex - 1;
-                        document.body.removeEventListener('keydown', keydownmain);
-                        document.body.removeEventListener('keyup', keyupmain);
-                        playVid(files[playingindex]);
-                    } else {
-                        showToast("No Video Found");
-                    }
-                }
-            }
-            if (e.key == "6") {
-                if ((new Date().getTime() - tstime) < 1000) {
-                    rotateVid(+10);
-                } else {
-                    if ((playingindex + 1) < files.length && playingindex != -1) {
-                        removeUrlParameter('ref');
-                        playingindex = playingindex + 1;
-                        document.body.removeEventListener('keydown', keydownmain);
-                        document.body.removeEventListener('keyup', keyupmain);
-                        playVid(files[playingindex]);
-                    } else {
-                        showToast("No Video Found");
-                    }
-                }
-            }
-
-            if (e.key == '9') {
-                if ((new Date().getTime() - tstime) < 1000) {
-                    var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 60 * 60) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); }
-                } else { vp.pause(); vp.currentTime = 0; vp.play(); }
-            }
-        }
-
         function keydownzero(e) {
             switch (e.key) {
                 case 'ArrowDown': focus(1);
@@ -421,7 +348,6 @@ try {
                     document.body.removeChild(document.querySelector('#zerobar'));
                     document.body.removeEventListener('keydown', keydownzero);
                     document.body.addEventListener('keydown', keydownmain);
-                    document.body.addEventListener('keyup', keyupmain);
                     break;
             }
 
@@ -452,19 +378,16 @@ try {
                     if (document.querySelector('#lockbtn').checked == true && document.querySelector('#inputpass').value != '') { localStorage.setItem('islocked', 'yes'); localStorage.setItem('lockedpass', document.querySelector('#inputpass').value); } else if (document.querySelector('#lockbtn').checked == false) { localStorage.setItem('islocked', 'no'); localStorage.removeItem('lockedpass'); }
                     document.body.removeChild(document.querySelector('#settings'));
                     document.body.removeEventListener('keydown', keydownsetting); document.body.addEventListener('keydown', keydownmain);
-                    document.body.addEventListener('keyup', keyupmain);
                     break;
                 case 'F1': localStorage.setItem('filetypes', document.querySelectorAll('#extentions')[0].value);
                     if (document.querySelector('#lockbtn').checked == true && document.querySelector('#inputpass').value != '') { localStorage.setItem('islocked', 'yes'); localStorage.setItem('lockedpass', document.querySelector('#inputpass').value); } else if (document.querySelector('#lockbtn').checked == false) { localStorage.setItem('islocked', 'no'); localStorage.removeItem('lockedpass'); }
                     document.body.removeChild(document.querySelector('#settings'));
                     document.body.removeEventListener('keydown', keydownsetting); document.body.addEventListener('keydown', keydownmain);
-                    document.body.addEventListener('keyup', keyupmain);
                     break;
                 case 'SoftRight':
-                    document.body.removeChild(document.querySelector('#settings'));
+                    document.body.removeChild(document.querySelector('#zerobar'));
                     document.body.removeEventListener('keydown', keydownsetting);
                     document.body.addEventListener('keydown', keydownmain);
-                    document.body.addEventListener('keyup', keyupmain);
                     break;
             }
 
@@ -492,7 +415,9 @@ try {
             } else {
                 localStorage.setItem(filename, vp.currentTime);
             }
-        });
+        }, 300);
+
+
 
 
         if (localStorage.getItem('bgplay') == 'yes') {
@@ -518,22 +443,6 @@ try {
                 }
             });
         }
-
-        function scaleVideo() {
-            var w = window.innerWidth;
-            var h = window.innerHeight;
-
-            if (w / 16 >= h / 9) {
-                vp.setAttribute('width', w);
-                vp.setAttribute('height', 'auto');
-            } else {
-                vp.setAttribute('width', 'auto');
-                vp.setAttribute('height', h);
-            }
-        }
-
-       // scaleVideo();
-
     }
 
 
@@ -547,74 +456,74 @@ try {
 
 
 
-    // function hideFile(blob) {
-    //     if (blob.name.includes('hdn-svid/')) {
-    //         showToast('<b>' + baseFileName(blob.name) + '</b> Already Hided');
-    //         document.body.removeChild(document.querySelector('#zerobar'));
-    //     } else {
-    //         var sdcard = navigator.getDeviceStorages('sdcard')[0];
-    //         var file = sdcard.get('hdn-svid/ed0de0f23');
-    //         file.onsuccess = function () {
-    //             console.log('found hidden index');
-    //         }
-    //         file.onerror = function () {
-    //             var fileforadd = new Blob(['null|null'], { type: 'text/plain' });
-    //             var setHfolder = sdcard.addNamed(fileforadd, 'hdn-svid/ed0de0f23');
-    //             setHfolder.onsuccess = function () {
-    //                 console.log('folder setuped');
-    //             }
-    //             setHfolder.onerror = function () {
-    //                 alert('hidden folder / index cant be created');
-    //             }
-    //         }
+    function hideFile(blob) {
+        if (blob.name.includes('hdn-svid/')) {
+            showToast('<b>' + baseFileName(blob.name) + '</b> Already Hided');
+            document.body.removeChild(document.querySelector('#zerobar'));
+        } else {
+            var sdcard = navigator.getDeviceStorages('sdcard')[0];
+            var file = sdcard.get('hdn-svid/ed0de0f23');
+            file.onsuccess = function () {
+                console.log('found hidden index');
+            }
+            file.onerror = function () {
+                var fileforadd = new Blob(['null|null'], { type: 'text/plain' });
+                var setHfolder = sdcard.addNamed(fileforadd, 'hdn-svid/ed0de0f23');
+                setHfolder.onsuccess = function () {
+                    console.log('folder setuped');
+                }
+                setHfolder.onerror = function () {
+                    alert('hidden folder / index cant be created');
+                }
+            }
 
-    //         var dateStr = new Date().getTime().toString();
+            var dateStr = new Date().getTime().toString();
 
-    //         var freeSpace = sdcard.freeSpace();
-    //         freeSpace.onsuccess = function () {
-    //             if (this.result > blob.size) {
-    //                 var addHfile = sdcard.addNamed(blob, 'hdn-svid/' + dateStr + '.hdn');
-    //                 addHfile.onsuccess = function () {
-    //                     var del = sdcard.delete(blob.name);
-    //                     del.onsuccess = function () {
-    //                         var file = sdcard.get('hdn-svid/ed0de0f23');
-    //                         file.onsuccess = function () {
-    //                             var r = new FileReader();
-    //                             r.onload = function () {
-    //                                 var c = r.result;
-    //                                 c += ',' + baseFileName(blob.name) + '|' + dateStr + '.hdn';
-    //                                 var deleteindex = sdcard.delete('hdn-svid/ed0de0f23');
-    //                                 deleteindex.onsuccess = function () {
-    //                                     var editedindex = new Blob([c], { type: 'text/plain' });
-    //                                     var setEindex = sdcard.addNamed(editedindex, 'hdn-svid/ed0de0f23');
-    //                                     setEindex.onsuccess = function () {
-    //                                         document.body.removeChild(document.querySelector('#zerobar'));
-    //                                         showToast('<b>' + baseFileName(blob.name) + '</b> Hided');
-    //                                     }
-    //                                 }
-    //                                 deleteindex.onerror = function () { showToast('cant delete index file'); }
-    //                             }
-    //                             r.readAsText(file.result);
-    //                             r.onerror = function () {
-    //                                 showToast('Invalid Index File');
-    //                             }
-    //                         }
-    //                         file.onerror = function () { showToast('Cant Read Index file'); }
-    //                     }
-    //                     del.onerror = function () {
-    //                         showToast('File Can\'t Moved');
-    //                     }
-    //                 }
-    //                 addHfile.onerror = function () {
-    //                     showToast('File Can\'t Hide');
-    //                 }
-    //             }
-    //             else {
-    //                 showToast('Not Enough Space Available');
-    //             }
-    //         }
-    //     }
-    // }
+            var freeSpace = sdcard.freeSpace();
+            freeSpace.onsuccess = function () {
+                if (this.result > blob.size) {
+                    var addHfile = sdcard.addNamed(blob, 'hdn-svid/' + dateStr + '.hdn');
+                    addHfile.onsuccess = function () {
+                        var del = sdcard.delete(blob.name);
+                        del.onsuccess = function () {
+                            var file = sdcard.get('hdn-svid/ed0de0f23');
+                            file.onsuccess = function () {
+                                var r = new FileReader();
+                                r.onload = function () {
+                                    var c = r.result;
+                                    c += ',' + baseFileName(blob.name) + '|' + dateStr + '.hdn';
+                                    var deleteindex = sdcard.delete('hdn-svid/ed0de0f23');
+                                    deleteindex.onsuccess = function () {
+                                        var editedindex = new Blob([c], { type: 'text/plain' });
+                                        var setEindex = sdcard.addNamed(editedindex, 'hdn-svid/ed0de0f23');
+                                        setEindex.onsuccess = function () {
+                                            document.body.removeChild(document.querySelector('#zerobar'));
+                                            showToast('<b>' + baseFileName(blob.name) + '</b> Hided');
+                                        }
+                                    }
+                                    deleteindex.onerror = function () { showToast('cant delete index file'); }
+                                }
+                                r.readAsText(file.result);
+                                r.onerror = function () {
+                                    showToast('Invalid Index File');
+                                }
+                            }
+                            file.onerror = function () { showToast('Cant Read Index file'); }
+                        }
+                        del.onerror = function () {
+                            showToast('File Can\'t Moved');
+                        }
+                    }
+                    addHfile.onerror = function () {
+                        showToast('File Can\'t Hide');
+                    }
+                }
+                else {
+                    showToast('Not Enough Space Available');
+                }
+            }
+        }
+    }
 
 
     document.addEventListener('DOMContentLoaded', () => { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); });
@@ -624,14 +533,6 @@ try {
     document.body.addEventListener('click', function () {
         console.info('Width: ' + window.innerWidth + '\nHeight: ' + window.innerHeight);
     });
-
-
-
-
-
-
 } catch (e) {
     showToast('<b>error:</b> ' + e.message);
 }
-
-

@@ -3,34 +3,38 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
+    <style>
+    </style>
 </head>
 
 <body>
     <div class="header">Help</div>
     <div class="content" style="background-color: white;bottom: 27px;box-shadow: inset 0px 0px 10px 5px #ddd;">
         <ul>
-            <li><b>0</b>: Video Details</li>
+            <li><b>0</b>: Video Details / Settings</li>
             <li><b>1 / 2 / 3</b>: Control Playback Speed</li>
             <li><b>4 / 6</b>: Control Video Rotation</li>
             <li><b>5</b>: Default Playback</li>
             <li><b>7</b>: Files List</li>
-            <li><b>8</b>: Toogle Subtitle</li>
+            <li><b>8</b>: Toggle Subtitle</li>
             <li><b>9</b>: Jump To Time</li>
             <li><b>* / #</b>: Zoom Out / In</li>
             <li><b>SoftLeft</b>: Toggle Fullscreen</li>
-            <li><b>SoftRight</b>: Mute/Unmute</li>
-            <li><b>Enter</b>: Play/Pause</li>
+            <li><b>SoftRight</b>: Mute / Unmute</li>
+            <li><b>Enter</b>: Play / Pause</li>
             <li><b>ArrowUp </b>: Volume Up</li>
             <li><b>ArrowDown</b>: Volume Down</li>
             <li><b>ArrowLeft </b>: 10 sec Backward</li>
             <li><b>ArrowRight</b>: 10 sec Forward</li>
-            <input type="file" onchange="playVid(this.files[0])" style="display: none;">
+            <input type="file"
+                onchange="playVid(this.files[0]);document.body.removeEventListener('keydown', keydownpick);"
+                style="display: noe;">
         </ul>
     </div>
     <div class="footer">
-        <div class="footerelement"></div>
+        <div class="footerelement">Setting</div>
         <div class="footerelement">Videos</div>
-        <div class="footerelement"></div>
+        <div class="footerelement">Exit</div>
     </div>
     <script src="kaiads.v5.min.js"></script>
     <script src="kai.js"></script>
@@ -39,4 +43,3 @@
 </body>
 
 </html>
-

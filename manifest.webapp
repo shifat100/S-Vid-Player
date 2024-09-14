@@ -5,7 +5,7 @@
   "launch_path": "/index.html",
   "developer": {
     "name": "shifat100",
-    "url": "https://shifat100.xtgem.com"
+    "url": "http://shifat100.xtgem.com/"
   },
   "origin": "app://s-vid.player",
   "fullscreen": true,
@@ -20,7 +20,11 @@
     },
     "device-storage:sdcard1": {
       "access": "readwrite"
-    }
+    },
+    "device-storage:music": {
+      "access": "readwrite"
+    },
+    "feature-detection": {}
   },
   "locales": {
     "en-US": {
@@ -64,6 +68,6 @@
       "returnValue": true
     }
   },
-  "version": "1.0",
+  "version": "1.6.0",
   "cursor": false
 }
