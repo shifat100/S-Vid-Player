@@ -115,20 +115,22 @@ function keydownvideolist(e) {
             restoreIt(document.activeElement.tabIndex);
             break;
     }
-    if (e.key == '0') {
-        window.location.href = '/files.html';
-    }
-    if (e.key == '1' || e.key == '2' || e.key == '3' || e.key == '4' || e.key == '5' || e.key == '6' || e.key == '7' || e.key == '8' || e.key == '9') {
+    if (e.key == '0' || e.key == '1' || e.key == '2' || e.key == '3' || e.key == '4' || e.key == '5' || e.key == '6' || e.key == '7' || e.key == '8' || e.key == '9') {
         num += e.key;
-        document.querySelector('#fdet').innerHTML = ('<center>' + num + '</center>');
-        setTimeout(function () {
+        if (num > 0) {
+          document.querySelector('#fdet').innerHTML = ('<center>' + num + '</center>');
+          setTimeout(function () {
             n = new Number(num) - 1;
             if (n < document.querySelectorAll('.listview').length) {
-                document.querySelectorAll('.listview')[n].focus();
-                num = '';
+              document.querySelectorAll('.listview')[n].focus();
+              num = '';
             } else { document.querySelector('#fdet').innerHTML = ('<center>No Such File</center>'); num = ''; }
-        }, 750);
-    }
+          }, 1000);
+        } else {
+          window.location.href = '/files.html';
+        }
+      }
+      
     function focus(move) {
         var currentIndex = document.activeElement.tabIndex;
         var next = currentIndex + move;

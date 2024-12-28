@@ -46,7 +46,8 @@
           "video/mp4",
           "video/3gpp",
           "video/3gpp2",
-          "video/ogg"
+          "video/ogg",
+          "video/x-matroska"
         ]
       },
       "href": "view.html",
@@ -60,14 +61,26 @@
           "video/mp4",
           "video/3gpp",
           "video/3gpp2",
-          "video/ogg"
+          "video/ogg",
+          "video/x-matroska"
         ]
       },
       "href": "view.html",
       "disposition": "inline",
       "returnValue": true
+    },
+    "share": {
+      "href": "/share.html",
+      "filters": {
+        "filenames": {
+          "pattern": ".*(mp|3g|mp4|3gp|mp3|3gpp|ja|mkv|m4)$",
+          "patternFlags": "gi"
+        }
+      },
+      "disposition": "inline",
+      "returnValue": true
     }
   },
-  "version": "1.6.0",
+  "version": "1.8.0",
   "cursor": false
 }

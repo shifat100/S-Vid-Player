@@ -47,22 +47,23 @@ try {
         var ispaused = false;
         // var playingindex = filenamearray.indexOf(baseFileName(originalBlob.name));
         var tstime = 0;
+        var checkbgplaycommand = 'false';
 
         header.innerHTML = baseFileName(originalBlob.name);
         app.style = 'background-color: black;';
-        app.innerHTML = `<video id="player" type="${blobtype}" mozAudioChannelType="content" autoplay>
-<source id="vidsrc" src="${path}" type="${blobtype}">
-</source>
-</video><audio id="player1" src="${path}" mozAudioChannelType="content"></audio>
-<div id="subtitle" style="background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;"></div><div id="pp"></div>
-<div id="details"></div>`;
+        app.innerHTML = `<video id="player" type="${blobtype}" autoplay>
+        <source id="vidsrc" src="${path}" type="${blobtype}">
+        </source>
+        </video><audio id="player1" src="${path}" mozaudiochannel="content" ></audio>
+        <div id="subtitle" style="background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;"></div><div id="pp"></div>
+        <div id="details"></div>`;
         f1.innerHTML = 'Fullscreen';
         f2.innerHTML = 'Pause';
         f3.innerHTML = 'Mute';
         var vp = document.querySelector('#player');
         var ap = document.querySelector('#player1');
 
-        /*vp.mozAudioChannelType = 'content';*/
+        /*vp.mozAudioChannelType = 'content'; mozAudioChannelType="alarm"*/
         var subtitleBar = document.getElementById('subtitle');
 
         if (gup("ref") == "filelist") {
@@ -95,7 +96,7 @@ try {
         function zoomOut() { scale -= 0.1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
         function rotateVid(n) { rotate += n; if (rotate > 360) { rotate = 0; } if (rotate < -360) { rotate = 0; } vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
         function defaultScreen() { scale = 1; rotate = 0; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; vp.playbackRate = 1; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } }
-        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);z-index: 999'; document.querySelectorAll('#details')[0].style = 'display: none;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 52'; } else { subtitleBar.style = 'display: none'; } }
+        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);z-index: 998'; document.querySelectorAll('#details')[0].style = 'display: none;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 999'; } else { subtitleBar.style = 'display: none'; } }
         function exitFullScreen() { fscreen = 'no'; app.style = 'top: 25px; bottom:50px; z-index: 0;'; rotate = 0; scale = 1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; document.querySelectorAll('#details')[0].style = 'display: block;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } else { subtitleBar.style = 'display: none'; } }
 
         function parseVTT(vttText) {
@@ -176,52 +177,52 @@ try {
             return null;
         }
 
-        // navigator.getDeviceStorages('sdcard').forEach(sdcard => {
-        //     var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.vtt'));
+        navigator.getDeviceStorages('sdcard').forEach(sdcard => {
+            var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), 'vtt'));
 
-        //     request.onsuccess = function () {
-        //         var fileReader = new FileReader();
-        //         fileReader.onload = function () {
-        //             subon = true;
-        //             issub = true;
-        //             var data = fileReader.result;
-        //             subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-        //             var subtitles = parseVTT(data);
-        //             vp.addEventListener('timeupdate', () => {
-        //                 var currentTime = vp.currentTime;
-        //                 var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
-        //                 subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
-        //             });
-        //         }
-        //         fileReader.readAsText(request.result);
-        //     }
-        //     request.onerror = function () {
-        //         var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.srt'));
+            request.onsuccess = function () {
+                var fileReader = new FileReader();
+                fileReader.onload = function () {
+                    subon = true;
+                    issub = true;
+                    var data = fileReader.result;
+                    subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
+                    var subtitles = parseVTT(data);
+                    vp.addEventListener('timeupdate', () => {
+                        var currentTime = vp.currentTime;
+                        var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
+                        subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
+                    });
+                }
+                fileReader.readAsText(request.result);
+            }
+            request.onerror = function () {
+                var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), 'srt'));
 
-        //         request1.onsuccess = function () {
-        //             var fileReader = new FileReader();
-        //             fileReader.onload = function () {
-        //                 subon = true;
-        //                 issub = true;
-        //                 var data = fileReader.result;
-        //                 subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-        //                 var subtitles = parseVTT(data);
-        //                 vp.addEventListener('timeupdate', () => {
-        //                     var currentTime = vp.currentTime;
-        //                     var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
-        //                     subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
-        //                 });
-        //             }
+                request1.onsuccess = function () {
+                    var fileReader = new FileReader();
+                    fileReader.onload = function () {
+                        subon = true;
+                        issub = true;
+                        var data = fileReader.result;
+                        subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
+                        var subtitles = parseSRT(data);
+                        vp.addEventListener('timeupdate', () => {
+                            var currentTime = vp.currentTime;
+                            var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
+                            subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
+                        });
+                    }
 
-        //             fileReader.readAsText(request1.result);
-        //         }
-        //         request1.onerror = function () {
-        //             subon = false;
-        //             issub = false;
-        //             subtitleBar.style.display = 'none';
-        //         };
-        //     };
-        // });
+                    fileReader.readAsText(request1.result);
+                }
+                request1.onerror = function () {
+                    subon = false;
+                    issub = false;
+                    subtitleBar.style.display = 'none';
+                };
+            };
+        });
 
         function zero() {
             var e = document.createElement('div');
@@ -292,6 +293,8 @@ try {
 
                 }
             });
+
+
 
             if (localStorage.getItem('bgplay') == 'yes') {
                 bgplaybtn.setAttribute('checked', 'check');
@@ -494,8 +497,8 @@ try {
             }
         });
 
-
-        if (localStorage.getItem('bgplay') == 'yes') {
+        setTimeout(function () { checkbgplaycommand = localStorage.getItem('bgplay'); }, 1000);
+        if (checkbgplaycommand == 'yes') {
             document.addEventListener('visibilitychange', function () {
 
                 if (document.hidden) {
@@ -519,6 +522,8 @@ try {
             });
         }
 
+
+
         function scaleVideo() {
             var w = window.innerWidth;
             var h = window.innerHeight;
@@ -532,7 +537,7 @@ try {
             }
         }
 
-       // scaleVideo();
+        // scaleVideo();
 
     }
 
@@ -547,79 +552,79 @@ try {
 
 
 
-    // function hideFile(blob) {
-    //     if (blob.name.includes('hdn-svid/')) {
-    //         showToast('<b>' + baseFileName(blob.name) + '</b> Already Hided');
-    //         document.body.removeChild(document.querySelector('#zerobar'));
-    //     } else {
-    //         var sdcard = navigator.getDeviceStorages('sdcard')[0];
-    //         var file = sdcard.get('hdn-svid/ed0de0f23');
-    //         file.onsuccess = function () {
-    //             console.log('found hidden index');
-    //         }
-    //         file.onerror = function () {
-    //             var fileforadd = new Blob(['null|null'], { type: 'text/plain' });
-    //             var setHfolder = sdcard.addNamed(fileforadd, 'hdn-svid/ed0de0f23');
-    //             setHfolder.onsuccess = function () {
-    //                 console.log('folder setuped');
-    //             }
-    //             setHfolder.onerror = function () {
-    //                 alert('hidden folder / index cant be created');
-    //             }
-    //         }
+    function hideFile(blob) {
+        if (blob.name.includes('hdn-svid/')) {
+            showToast('<b>' + baseFileName(blob.name) + '</b> Already Hided');
+            document.body.removeChild(document.querySelector('#zerobar'));
+        } else {
+            var sdcard = navigator.getDeviceStorages('sdcard')[0];
+            var file = sdcard.get('hdn-svid/ed0de0f23');
+            file.onsuccess = function () {
+                console.log('found hidden index');
+            }
+            file.onerror = function () {
+                var fileforadd = new Blob(['null|null'], { type: 'text/plain' });
+                var setHfolder = sdcard.addNamed(fileforadd, 'hdn-svid/ed0de0f23');
+                setHfolder.onsuccess = function () {
+                    console.log('folder setuped');
+                }
+                setHfolder.onerror = function () {
+                    alert('hidden folder / index cant be created');
+                }
+            }
 
-    //         var dateStr = new Date().getTime().toString();
+            var dateStr = new Date().getTime().toString();
 
-    //         var freeSpace = sdcard.freeSpace();
-    //         freeSpace.onsuccess = function () {
-    //             if (this.result > blob.size) {
-    //                 var addHfile = sdcard.addNamed(blob, 'hdn-svid/' + dateStr + '.hdn');
-    //                 addHfile.onsuccess = function () {
-    //                     var del = sdcard.delete(blob.name);
-    //                     del.onsuccess = function () {
-    //                         var file = sdcard.get('hdn-svid/ed0de0f23');
-    //                         file.onsuccess = function () {
-    //                             var r = new FileReader();
-    //                             r.onload = function () {
-    //                                 var c = r.result;
-    //                                 c += ',' + baseFileName(blob.name) + '|' + dateStr + '.hdn';
-    //                                 var deleteindex = sdcard.delete('hdn-svid/ed0de0f23');
-    //                                 deleteindex.onsuccess = function () {
-    //                                     var editedindex = new Blob([c], { type: 'text/plain' });
-    //                                     var setEindex = sdcard.addNamed(editedindex, 'hdn-svid/ed0de0f23');
-    //                                     setEindex.onsuccess = function () {
-    //                                         document.body.removeChild(document.querySelector('#zerobar'));
-    //                                         showToast('<b>' + baseFileName(blob.name) + '</b> Hided');
-    //                                     }
-    //                                 }
-    //                                 deleteindex.onerror = function () { showToast('cant delete index file'); }
-    //                             }
-    //                             r.readAsText(file.result);
-    //                             r.onerror = function () {
-    //                                 showToast('Invalid Index File');
-    //                             }
-    //                         }
-    //                         file.onerror = function () { showToast('Cant Read Index file'); }
-    //                     }
-    //                     del.onerror = function () {
-    //                         showToast('File Can\'t Moved');
-    //                     }
-    //                 }
-    //                 addHfile.onerror = function () {
-    //                     showToast('File Can\'t Hide');
-    //                 }
-    //             }
-    //             else {
-    //                 showToast('Not Enough Space Available');
-    //             }
-    //         }
-    //     }
-    // }
+            var freeSpace = sdcard.freeSpace();
+            freeSpace.onsuccess = function () {
+                if (this.result > blob.size) {
+                    var addHfile = sdcard.addNamed(blob, 'hdn-svid/' + dateStr + '.hdn');
+                    addHfile.onsuccess = function () {
+                        var del = sdcard.delete(blob.name);
+                        del.onsuccess = function () {
+                            var file = sdcard.get('hdn-svid/ed0de0f23');
+                            file.onsuccess = function () {
+                                var r = new FileReader();
+                                r.onload = function () {
+                                    var c = r.result;
+                                    c += ',' + baseFileName(blob.name) + '|' + dateStr + '.hdn';
+                                    var deleteindex = sdcard.delete('hdn-svid/ed0de0f23');
+                                    deleteindex.onsuccess = function () {
+                                        var editedindex = new Blob([c], { type: 'text/plain' });
+                                        var setEindex = sdcard.addNamed(editedindex, 'hdn-svid/ed0de0f23');
+                                        setEindex.onsuccess = function () {
+                                            document.body.removeChild(document.querySelector('#zerobar'));
+                                            showToast('<b>' + baseFileName(blob.name) + '</b> Hided');
+                                        }
+                                    }
+                                    deleteindex.onerror = function () { showToast('cant delete index file'); }
+                                }
+                                r.readAsText(file.result);
+                                r.onerror = function () {
+                                    showToast('Invalid Index File');
+                                }
+                            }
+                            file.onerror = function () { showToast('Cant Read Index file'); }
+                        }
+                        del.onerror = function () {
+                            showToast('File Can\'t Moved');
+                        }
+                    }
+                    addHfile.onerror = function () {
+                        showToast('File Can\'t Hide');
+                    }
+                }
+                else {
+                    showToast('Not Enough Space Available');
+                }
+            }
+        }
+    }
 
 
     document.addEventListener('DOMContentLoaded', () => { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); });
 
-    document.body.addEventListener('keyup', () => { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); });
+   setInterval(function() { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); }, 20000);
 
     document.body.addEventListener('click', function () {
         console.info('Width: ' + window.innerWidth + '\nHeight: ' + window.innerHeight);

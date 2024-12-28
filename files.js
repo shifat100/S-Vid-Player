@@ -257,7 +257,7 @@ function keydownvideolist(e) {
           document.querySelectorAll('.listview')[n].focus();
           num = '';
         } else { document.querySelector('#fdet').innerHTML = ('<center>No Such File</center>'); num = ''; }
-      }, 750);
+      }, 1000);
     } else {
       window.location.href = '/hidden.html?act=hidden';
     }

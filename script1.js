@@ -4,10 +4,10 @@ try {
     }
     function fileExtention(filename) {
         var fsplit = filename.split(".");
-        var extention = fsplit[fsplit.length-1];
+        var extention = fsplit[fsplit.length - 1];
         return extention;
     }
-    
+
 
     function playVid(originalBlob) {
         var blob = new Blob([originalBlob], { type: 'video/mp4' });
@@ -32,7 +32,7 @@ try {
         app.innerHTML = `<video id="player" type="${blobtype}" mozAudioChannelType="content" autoplay>
 <source id="vidsrc" src="${path}" type="${blobtype}">
 </source>
-</video><audio id="player1" src="${path}" mozAudioChannelType="content"></audio>
+</video><audio id="player1" src="${path}" mozAudioChannelType="alarm"></audio>
 <div id="subtitle" style="background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;"></div><div id="pp"></div>
 <div id="details"></div>`;
         f1.innerHTML = 'Fullscreen';
@@ -59,7 +59,7 @@ try {
         function zoomOut() { scale -= 0.1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
         function rotateVid(n) { rotate += n; if (rotate > 360) { rotate = 0; } if (rotate < -360) { rotate = 0; } vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
         function defaultScreen() { scale = 1; rotate = 0; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; vp.playbackRate = 1; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } }
-        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);z-index: 999'; document.querySelectorAll('#details')[0].style = 'display: none;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 52'; } else { subtitleBar.style = 'display: none'; } }
+        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);z-index: 998'; document.querySelectorAll('#details')[0].style = 'display: none;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 999'; } else { subtitleBar.style = 'display: none'; } }
         function exitFullScreen() { fscreen = 'no'; app.style = 'top: 25px; bottom:50px; z-index: 0;'; rotate = 0; scale = 1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; document.querySelectorAll('#details')[0].style = 'display: block;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } else { subtitleBar.style = 'display: none'; } }
 
         function parseVTT(vttText) {
@@ -141,7 +141,7 @@ try {
         }
 
         navigator.getDeviceStorages('sdcard').forEach(sdcard => {
-            var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.vtt'));
+            var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), 'vtt'));
 
             request.onsuccess = function () {
                 var fileReader = new FileReader();
@@ -160,7 +160,7 @@ try {
                 fileReader.readAsText(request.result);
             }
             request.onerror = function () {
-                var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), '.srt'));
+                var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), 'srt'));
 
                 request1.onsuccess = function () {
                     var fileReader = new FileReader();
@@ -169,7 +169,7 @@ try {
                         issub = true;
                         var data = fileReader.result;
                         subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-                        var subtitles = parseVTT(data);
+                        var subtitles = parseSRT(data);
                         vp.addEventListener('timeupdate', () => {
                             var currentTime = vp.currentTime;
                             var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
