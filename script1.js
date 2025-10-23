@@ -1,15 +1,271 @@
 try {
+    // Polyfill for String.prototype.includes
     String.prototype.includes = function (str) {
         return this.indexOf(str) !== -1;
     }
+
+    // Helper Functions (Stubs for completeness, as they are used but not defined in the original snippet)
+    function showToast(message) { console.log('Toast:', message); }
+    function baseFileName(filename) { 
+        if (!filename) return '';
+        const parts = filename.split('/');
+        return parts[parts.length - 1];
+    }
+    function showSize(size) { return size + ' bytes'; }
+    function gup(name, url) { return ''; } 
+    // END Helper Functions
+
     function fileExtention(filename) {
         var fsplit = filename.split(".");
         var extention = fsplit[fsplit.length - 1];
         return extention;
     }
 
+    function decodeMPAFile(file) {
+        const SEPARATOR_STRING = '[shifat100]';
 
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                try {
+                    const arrayBuffer = event.target.result;
+                    const fileBytes = new Uint8Array(arrayBuffer);
+                    const separatorBytes = new TextEncoder().encode(SEPARATOR_STRING);
+
+                    var separatorIndex = -1;
+                    for (var i = 0; i <= fileBytes.length - separatorBytes.length; i++) {
+                        var found = true;
+                        for (var j = 0; j < separatorBytes.length; j++) {
+                            if (fileBytes[i + j] !== separatorBytes[j]) {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            separatorIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (separatorIndex === -1) {
+                        reject(new Error('MPA separator not found.'));
+                        return;
+                    }
+                       
+                    
+                    const audioData = arrayBuffer.slice(0, separatorIndex);
+                    const videoData = arrayBuffer.slice(separatorIndex + separatorBytes.length);
+
+                    // Note: The audio/video types are assumed to be mp4 based on the original code
+                    const audioBlob = new Blob([audioData], { type: 'audio/mp4' });
+                    const videoBlob = new Blob([videoData], { type: 'video/mp4' });
+
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const videoUrl = URL.createObjectURL(videoBlob);
+
+                    resolve({ audioUrl, videoUrl, originalName: file.name });
+                    
+
+                } catch (err) {
+                    reject(err);
+                }
+            };
+
+            reader.onerror = () => {
+                reject(new Error('Failed to read the file.'));
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // New function to handle playback of decoded MPA streams (separate audio and video URLs)
+    function playDecodedMPA(videoUrl, audioUrl, filename) {
+        var header = document.getElementsByClassName('header')[0];
+        var f1 = document.querySelectorAll('.footerelement')[0];
+        var f2 = document.querySelectorAll('.footerelement')[1];
+        var f3 = document.querySelectorAll('.footerelement')[2];
+        var app = document.getElementsByClassName('content')[0];
+        var originalName = filename;
+        var scale = 1;
+        var rotate = 0;
+        var fscreen = 'no';
+        var ispaused = false;
+        var tstime = 0;
+        var isrepeat=false;
+        var issub = false; // Subtitle logic not implemented for decoded stream for simplicity
+        var subon = false; // Subtitle logic not implemented for decoded stream for simplicity
+
+        header.innerHTML = baseFileName(originalName);
+        app.style = 'background-color: black;';
+
+        // Set the video element to the video stream URL and the audio element to the audio stream URL
+        app.innerHTML = `<video id="player" type="video/mp4" autoplay>
+            <source id="vidsrc" src="${videoUrl}" type="video/mp4">
+        </source>
+        </video><audio id="player1" src="${audioUrl}" mozaudiochannel="content" autoplay></audio>
+        <div id="subtitle" style="background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center; display:none;"></div><div id="pp"></div>
+        <div id="details"></div>`;
+
+        f1.innerHTML = 'Fullscreen';
+        f2.innerHTML = 'Pause';
+        f3.innerHTML = 'Mute';
+        var vp = document.querySelector('#player');
+        var ap = document.querySelector('#player1');
+        var subtitleBar = document.getElementById('subtitle');
+        subtitleBar.style.display = 'none'; // Hide subtitles since the logic isn't adapted for dual stream
+
+        // Synchronize playback (optional, but good practice for dual streams)
+        vp.addEventListener('play', () => { ap.play(); });
+        vp.addEventListener('pause', () => { ap.pause(); });
+        vp.addEventListener('seeked', () => { ap.currentTime = vp.currentTime; });
+        ap.addEventListener('seeked', () => { vp.currentTime = ap.currentTime; });
+
+        // Volume/Mute synchronization
+        vp.addEventListener('volumechange', () => { ap.volume = vp.volume; ap.muted = vp.muted; });
+        ap.addEventListener('volumechange', () => { vp.volume = ap.volume; vp.muted = ap.muted; });
+
+        // Basic resume logic (using the video element's duration/time)
+        var filenameStorage = baseFileName(originalName);
+        if (localStorage.getItem(filenameStorage) != null) {
+            vp.pause();
+            ap.pause();
+            if (window.confirm('Resume Previous Playback ?')) {
+                vp.currentTime = localStorage.getItem(filenameStorage);
+                ap.currentTime = localStorage.getItem(filenameStorage);
+                vp.play();
+            } else { vp.currentTime = 0; ap.currentTime = 0; vp.play(); }
+        }
+
+        // --- Rest of playVid logic adapted for dual streams (mostly using vp for video properties) ---
+
+        function addZero(n) { return n < 10 ? '0' + n : n }
+        function zoomIn() { scale += 0.1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
+        function zoomOut() { scale -= 0.1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
+        function rotateVid(n) { rotate += n; if (rotate > 360) { rotate = 0; } if (rotate < -360) { rotate = 0; } vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
+        function defaultScreen() { scale = 1; rotate = 0; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; vp.playbackRate = 1; }
+        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);z-index: 998'; document.querySelectorAll('#details')[0].style = 'display: none;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 999'; } else { subtitleBar.style = 'display: none'; } }
+        function exitFullScreen() { fscreen = 'no'; app.style = 'top: 25px; bottom:50px; z-index: 0;'; rotate = 0; scale = 1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; document.querySelectorAll('#details')[0].style = 'display: block;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } else { subtitleBar.style = 'display: none'; } }
+        
+        // Subtitle logic is skipped as it relies on navigator.getDeviceStorages which is not generic.
+
+        // Placeholder functions for the zero menu logic
+        function zero() { showToast('Zero Menu not fully implemented for decoded stream.'); }
+        function videoDetails() { showToast('Video Details not fully implemented for decoded stream.'); }
+        function settings() { showToast('Settings not fully implemented for decoded stream.'); }
+        function hideFile(blob) { showToast('Hide File not fully implemented for decoded stream.'); }
+        
+        // Keydown handlers (modified for dual streams)
+        document.body.addEventListener('keydown', keydownmain);
+        document.body.addEventListener('keyup', keyupmain);
+        
+        // keydownmain logic (adapted)
+        function keydownmain(e) {
+            if (e.key == 'Enter') { 
+                if (vp.paused) { vp.play(); ap.play(); f2.innerHTML = 'Pause'; showToast('Playback Resumed'); ispaused = false; } else { vp.pause(); ap.pause(); f2.innerHTML = 'Play'; showToast('Playback Paused'); ispaused = true; } 
+            }
+            if (e.key == 'ArrowLeft') { vp.currentTime -= 10; ap.currentTime -= 10; }
+            if (e.key == 'ArrowRight') { vp.currentTime += 10; ap.currentTime += 10; }
+            if (e.key == 'ArrowUp') { /* volume.requestUp() is commented out */ }
+            if (e.key == 'ArrowDown') { /* volume.requestDown() is commented out */ }
+            if (e.key == '1') { tstime = new Date().getTime(); }
+            if (e.key == '2') { vp.playbackRate = 1; ap.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
+            if (e.key == '3') { tstime = new Date().getTime(); }
+            if (e.key == '4') { rotateVid(-10); }
+            if (e.key == '5') { tstime = new Date().getTime(); }
+            if (e.key == '6') { rotateVid(+10); }
+            if (e.key == '7') {
+                if (gup('act', window.location.href) == 'hidden') {
+                    window.location.href = '/hidden.html';
+                } else {
+                    window.location.href = '/files.html';
+                }
+            }
+            if (e.key == '8') { showToast('Subtitle not supported for decoded MPA file.'); } // Subtitle check simplified
+            if (e.key == '9') { tstime = new Date().getTime(); }
+            if (e.key == '*') { zoomOut(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
+            if (e.key == '#' || e.key == '/') { zoomIn(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
+            if (e.key == '0') { zero(); }
+            if (e.key == 'SoftLeft' || e.key == 'F1') { if (fscreen == 'yes') { exitFullScreen(); showToast('Closed FullScreen'); } else { openFullScreen(); } }
+            if (e.key == 'SoftRight' || e.key == 'F2') { 
+                if (vp.muted) { vp.muted = false; ap.muted = false; f3.innerHTML = 'Mute'; showToast('Video Unmuted'); } else { vp.muted = true; ap.muted = true; f3.innerHTML = 'Unmute'; showToast('Video Muted'); } 
+            }
+            if (e.key === 'Call' || e.key == 's') { showToast('Screenshot not fully implemented for decoded stream.'); }
+        }
+
+        // keyupmain logic (adapted)
+        function keyupmain(e) {
+            if (e.key == '1') { if ((new Date().getTime() - tstime) < 1000) { vp.playbackRate -= 0.1; ap.playbackRate -= 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); } else { vp.currentTime -= 200; ap.currentTime -= 200; } }
+
+            if (e.key == '2') { vp.playbackRate = 1; ap.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
+            if (e.key == '3') { if ((new Date().getTime() - tstime) < 1000) { vp.playbackRate += 0.1; ap.playbackRate += 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); } else { vp.currentTime += 200; ap.currentTime += 200; } }
+            if (e.key == '5') {
+                if ((new Date().getTime() - tstime) < 1000) {
+                    defaultScreen(); showToast('Default Playback');
+                } else {
+                    if (isrepeat == false) { vp.setAttribute('loop', Infinity); ap.setAttribute('loop', Infinity); isrepeat = true; showToast('Repeat Playback On'); } else {
+                        vp.removeAttribute('loop'); ap.removeAttribute('loop'); isrepeat = false; showToast('Repeat Playback Off');
+                    }
+                }
+            }
+            if (e.key == '9') {
+                if ((new Date().getTime() - tstime) < 1000) {
+                    var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 60 * 60) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; ap.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); }
+                } else { vp.pause(); ap.pause(); vp.currentTime = 0; ap.currentTime = 0; vp.play(); }
+            }
+        }
+        
+        // zero/setting keydown/focus handlers are omitted for brevity as they are complex and rely on undefined variables/functions.
+
+        // Time update and progress bar logic
+       setInterval(function () {
+            var rand = Math.floor(Math.random() * 255) + 100;
+            rand = 33;
+            document.querySelector('#details').innerHTML = '<table width="100%" style="color: white"><tr><td style="width: 50%;text-align: center">' + (addZero(new Date(vp.currentTime * 1000).getHours() - 6) + ':' + addZero(new Date(vp.currentTime * 1000).getMinutes()) + ':' + addZero(new Date(vp.currentTime * 1000).getSeconds()) + '/' + addZero(new Date(vp.duration * 1000).getHours() - 6) + ':' + addZero(new Date(vp.duration * 1000).getMinutes()) + ':' + addZero(new Date(vp.duration * 1000).getSeconds()) + '</td><td style="width: 50%;text-align: center">' + vp.playbackRate.toFixed(1)) + ' X</td></tr></table>';
+            if (fscreen == 'yes') { document.querySelector('#pp').style = 'display:none'; } else { document.querySelector('#pp').style = 'width:' + ((vp.currentTime / vp.duration) * 100 + '%;display: block; padding: 1px 0px;background: rgb(' + (((vp.currentTime / vp.duration) * 100).toFixed(0) * 2.5).toFixed(0) + ',' + (255 - (((vp.currentTime / vp.duration) * 100).toFixed(0) * 2.5).toFixed(0)) + ',' + rand + ');position:fixed; bottom: 49px; left: 0px;z-index: 5;border-right: 5px groove white;'); }
+            if (((vp.currentTime / vp.duration) * 100) == 100) {
+                localStorage.removeItem(filenameStorage);
+                vp.pause();
+                ap.pause();
+                ispaused = true;
+                f2.innerHTML = 'Play';
+            } else {
+                localStorage.setItem(filenameStorage, vp.currentTime);
+            }
+        }, 300);
+        
+        // Background play logic (adapted)
+        setInterval(function () { checkbgplaycommand = localStorage.getItem('bgplay'); }, 1000);
+        if (checkbgplaycommand == 'yes') {
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    if (ispaused === false) {
+                        vp.pause();
+                        console.log('app hided');
+                        ap.currentTime = localStorage.getItem(filenameStorage);
+                        ap.play();
+                        ap.addEventListener('timeupdate', function () {
+                            localStorage.setItem(filenameStorage, ap.currentTime);
+                        });
+                    }
+                } else {
+                    if (ispaused === true) { ap.pause(); vp.pause(); } else {
+                        ap.pause();
+                        vp.currentTime = localStorage.getItem(filenameStorage);
+                        vp.play();
+                        console.log('app showed');
+                    }
+                }
+            });
+        }
+        
+    }
+    // End playDecodedMPA
+
+    
     function playVid(originalBlob) {
+       
         var blob = new Blob([originalBlob], { type: 'video/mp4' });
         var blobtype = blob.type;
         var path = URL.createObjectURL(blob);
@@ -26,13 +282,16 @@ try {
         var issub = false;
         var subon = true;
         var ispaused = false;
+        var checkbgplaycommand = 'false';
+        var tstime = 0;
+        var isrepeat=false;
 
         header.innerHTML = baseFileName(originalBlob.name);
         app.style = 'background-color: black;';
-        app.innerHTML = `<video id="player" type="${blobtype}" mozAudioChannelType="content" autoplay>
+        app.innerHTML = `<video id="player" type="${blobtype}" autoplay>
 <source id="vidsrc" src="${path}" type="${blobtype}">
 </source>
-</video><audio id="player1" src="${path}" mozAudioChannelType="alarm"></audio>
+</video><audio id="player1" src="${path}" mozaudiochannel="content"></audio>
 <div id="subtitle" style="background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;"></div><div id="pp"></div>
 <div id="details"></div>`;
         f1.innerHTML = 'Fullscreen';
@@ -41,7 +300,7 @@ try {
         var vp = document.querySelector('#player');
         var ap = document.querySelector('#player1');
 
-        /*vp.mozAudioChannelType = 'content';*/
+        /*vp.mozAudioChannel = 'content';*/
         var subtitleBar = document.getElementById('subtitle');
 
         if (localStorage.getItem(filename) != null) {
@@ -200,11 +459,13 @@ try {
                 hideFile(originalBlob);
                 document.body.removeEventListener('keydown', keydownzero);
                 document.body.addEventListener('keydown', keydownmain);
+                document.body.addEventListener('keyup', keyupmain);
             });
 
 
             document.querySelectorAll('.zerolist')[0].focus();
             document.body.removeEventListener('keydown', keydownmain);
+            document.body.removeEventListener('keyup', keyupmain);
             document.body.addEventListener('keydown', keydownzero);
         }
 
@@ -220,6 +481,7 @@ try {
 
             document.body.removeEventListener('keydown', keydownzero);
             document.body.addEventListener('keydown', keydownmain);
+            document.body.addEventListener('keyup', keyupmain);
         }
 
         function settings() {
@@ -277,6 +539,7 @@ try {
         }
 
         document.body.addEventListener('keydown', keydownmain);
+        document.body.addEventListener('keyup', keyupmain);
 
         function keydownmain(e) {
             if (e.key == 'Enter') { if (vp.paused) { vp.play(); f2.innerHTML = 'Pause'; showToast('Playback Resumed'); ispaused = false; } else { vp.pause(); f2.innerHTML = 'Play'; showToast('Playback Paused'); ispaused = true; } }
@@ -284,11 +547,11 @@ try {
             if (e.key == 'ArrowRight') { vp.currentTime += 10; }
             if (e.key == 'ArrowUp') { volume.requestUp(); }
             if (e.key == 'ArrowDown') { volume.requestDown(); }
-            if (e.key == '1') { vp.playbackRate -= 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
+            if (e.key == '1') { tstime = new Date().getTime(); }
             if (e.key == '2') { vp.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
-            if (e.key == '3') { vp.playbackRate += 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
+            if (e.key == '3') { tstime = new Date().getTime(); }
             if (e.key == '4') { rotateVid(-10); }
-            if (e.key == '5') { defaultScreen(); showToast('Default Playback'); }
+            if (e.key == '5') { tstime = new Date().getTime(); }
             if (e.key == '6') { rotateVid(+10); }
             if (e.key == '7') {
                 if (gup('act', window.location.href) == 'hidden') {
@@ -306,7 +569,7 @@ try {
                     }
                 } else { showToast('No Subtitle Found'); }
             }
-            if (e.key == '9') { var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 60 * 60) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); } }
+            if (e.key == '9') { tstime = new Date().getTime(); }
             if (e.key == '*') { zoomOut(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
             if (e.key == '#' || e.key == '/') { zoomIn(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
             if (e.key == '0') { zero(); }
@@ -331,6 +594,26 @@ try {
                 document.body.removeChild(canvas);
             }
         }
+        function keyupmain(e) {
+            if (e.key == '1') { if ((new Date().getTime() - tstime) < 1000) { vp.playbackRate -= 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); } else { vp.currentTime -= 200; } }
+
+            if (e.key == '2') { vp.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
+            if (e.key == '3') { if ((new Date().getTime() - tstime) < 1000) { vp.playbackRate += 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); } else { vp.currentTime += 200; } }
+            if (e.key == '5') {
+                if ((new Date().getTime() - tstime) < 1000) {
+                    defaultScreen(); showToast('Default Playback');
+                } else {
+                    if (isrepeat == false) { vp.setAttribute('loop', Infinity); ap.setAttribute('loop', Infinity); showToast('Repeat Playback On'); } else {
+                        vp.removeAttribute('loop'); ap.removeAttribute('loop'); showToast('Repeat Playback Off');
+                    }
+                }
+            }
+            if (e.key == '9') {
+                if ((new Date().getTime() - tstime) < 1000) {
+                    var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 60 * 60) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); }
+                } else { vp.pause(); vp.currentTime = 0; vp.play(); }
+            }
+        }
 
         function keydownzero(e) {
             switch (e.key) {
@@ -348,6 +631,7 @@ try {
                     document.body.removeChild(document.querySelector('#zerobar'));
                     document.body.removeEventListener('keydown', keydownzero);
                     document.body.addEventListener('keydown', keydownmain);
+                    document.body.addEventListener('keyup', keyupmain);
                     break;
             }
 
@@ -377,17 +661,22 @@ try {
                 case 'SoftLeft': localStorage.setItem('filetypes', document.querySelectorAll('#extentions')[0].value);
                     if (document.querySelector('#lockbtn').checked == true && document.querySelector('#inputpass').value != '') { localStorage.setItem('islocked', 'yes'); localStorage.setItem('lockedpass', document.querySelector('#inputpass').value); } else if (document.querySelector('#lockbtn').checked == false) { localStorage.setItem('islocked', 'no'); localStorage.removeItem('lockedpass'); }
                     document.body.removeChild(document.querySelector('#settings'));
-                    document.body.removeEventListener('keydown', keydownsetting); document.body.addEventListener('keydown', keydownmain);
+                    document.body.removeEventListener('keydown', keydownsetting); 
+                    document.body.addEventListener('keydown', keydownmain);
+                    document.body.addEventListener('keyup', keyupmain);
                     break;
                 case 'F1': localStorage.setItem('filetypes', document.querySelectorAll('#extentions')[0].value);
                     if (document.querySelector('#lockbtn').checked == true && document.querySelector('#inputpass').value != '') { localStorage.setItem('islocked', 'yes'); localStorage.setItem('lockedpass', document.querySelector('#inputpass').value); } else if (document.querySelector('#lockbtn').checked == false) { localStorage.setItem('islocked', 'no'); localStorage.removeItem('lockedpass'); }
                     document.body.removeChild(document.querySelector('#settings'));
-                    document.body.removeEventListener('keydown', keydownsetting); document.body.addEventListener('keydown', keydownmain);
+                    document.body.removeEventListener('keydown', keydownsetting); 
+                    document.body.addEventListener('keydown', keydownmain);
+                    document.body.addEventListener('keyup', keyupmain);
                     break;
                 case 'SoftRight':
-                    document.body.removeChild(document.querySelector('#zerobar'));
+                    document.body.removeChild(document.querySelector('#settings'));
                     document.body.removeEventListener('keydown', keydownsetting);
                     document.body.addEventListener('keydown', keydownmain);
+                    document.body.addEventListener('keyup', keyupmain);
                     break;
             }
 
@@ -402,7 +691,7 @@ try {
             }
         }
 
-        vp.addEventListener('timeupdate', function () {
+       setInterval(function () {
             var rand = Math.floor(Math.random() * 255) + 100;
             rand = 33;
             document.querySelector('#details').innerHTML = '<table width="100%" style="color: white"><tr><td style="width: 50%;text-align: center">' + (addZero(new Date(vp.currentTime * 1000).getHours() - 6) + ':' + addZero(new Date(vp.currentTime * 1000).getMinutes()) + ':' + addZero(new Date(vp.currentTime * 1000).getSeconds()) + '/' + addZero(new Date(vp.duration * 1000).getHours() - 6) + ':' + addZero(new Date(vp.duration * 1000).getMinutes()) + ':' + addZero(new Date(vp.duration * 1000).getSeconds()) + '</td><td style="width: 50%;text-align: center">' + vp.playbackRate.toFixed(1)) + ' X</td></tr></table>';
@@ -420,7 +709,8 @@ try {
 
 
 
-        if (localStorage.getItem('bgplay') == 'yes') {
+        setInterval(function () { checkbgplaycommand = localStorage.getItem('bgplay'); }, 1000);
+        if (checkbgplaycommand == 'yes') {
             document.addEventListener('visibilitychange', function () {
 
                 if (document.hidden) {
@@ -449,9 +739,27 @@ try {
     function machine(blob) {
         document.body.removeEventListener('keydown', keydownvideolist);
         document.querySelector('#fdet').style.display = 'none';
+        var app = document.getElementsByClassName('content')[0];
         app.innerHTML = '';
-        playVid(blob);
-        showToast('Press 7 To File List');
+        
+        var ext = fileExtention(blob.name).toLowerCase();
+
+        if (ext === 'mpa') {
+            showToast('Decoding MPA File...');
+            decodeMPAFile(blob)
+                .then(({ audioUrl, videoUrl, originalName }) => {
+                    playDecodedMPA(videoUrl, audioUrl, originalName);
+                    showToast('Press 7 To File List');
+                })
+                .catch(err => {
+                    showToast('MPA Decoding Failed: ' + err.message);
+                    // Optionally, fall back to trying to play the file as a regular video
+                    playVid(blob);
+                });
+        } else {
+            playVid(blob);
+            showToast('Press 7 To File List');
+        }
     }
 
 

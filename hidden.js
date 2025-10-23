@@ -32,12 +32,12 @@ file.onsuccess = function () {
                     ti++;
                     item.innerHTML = '<img src = "ext.png" style="width: 20px;vertical-align: middle;margin-right: 5px">' + filename;
                     item.addEventListener('click', function () {
-                        document.querySelector('style').innerHTML = '.content{top:25px;bottom:50px;position:fixed;width:100%;overflow:hidden;left:0;background-color:#000;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}';
-                        machine(v);
+                        //document.querySelector('style').innerHTML = '.content{top:25px;bottom:50px;position:fixed;width:100%;overflow:hidden;left:0;background-color:#000;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}';
+                        alert('Video Playing Feature Removed In This Version, You Can Unhide Only');
                     });
                     item.addEventListener('focus', function (e) {
                         document.querySelector('#fdet').innerHTML = '<table width="100%" style="color: black"><tr><td style="width: 50%;text-align: center">' + v.size + ' Bytes</td><td style="width: 50%;text-align: center">hidden</td></tr></table>';
-                        if (localStorage.getItem(baseFileName(v.name)) === null) { f2.innerHTML = 'Play'; } else { f2.innerHTML = 'Resume'; }
+                         f2.innerHTML = ''; 
 
                     });
                     if (app.appendChild(item)) {

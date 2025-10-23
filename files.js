@@ -4,9 +4,22 @@ String.prototype.includes = function (str) {
   return this.indexOf(str) !== -1;
 }
 
+
+function playxfile(blob) {
+
+  if ((blob.name).includes('.mpa')) {
+    if (localStorage.getItem('isrestored') == 'false') { plaympa(blob); } else {
+      showToast('Can\'t Play An *.mpa File On Restored Mode')
+    }
+  }
+  else {
+    machine(blob);
+  }
+}
+
 var types;
 if (localStorage.getItem('filetypes') === null) {
-  types = ['mp4', '3gp', 'mkv', '3gpp'];
+  types = ['mp4', '3gp', 'mkv', '3gpp', 'mpa'];
 } else {
   exts = localStorage.getItem('filetypes').replace(/ /gi, '');
   types = exts.split(',');
@@ -44,10 +57,14 @@ function internalCard() {
         item.className = 'listview file';
         item.tabIndex = ti;
         ti++;
-        item.innerHTML = '<img src = "ext.png" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
+        var fileicon = 'ext.png';
+        /*getVideoCover(file, 1.5).then(function (cover) {
+          fileicon = cover;
+        });*/
+        item.innerHTML = '<img src = "' + fileicon + '" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
         item.addEventListener('click', function () {
           document.querySelector('style').innerHTML = '.content{top:25px;bottom:50px;position:fixed;width:100%;overflow:hidden;left:0;background-color:#000;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}';
-          machine(file);
+          playxfile(file);
 
         });
         item.addEventListener('focus', function () {
@@ -95,10 +112,14 @@ function externalCard() {
         item.className = 'listview file';
         item.tabIndex = ti;
         ti++;
-        item.innerHTML = '<img src = "ext.png" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
+        var fileicon = 'ext.png';
+        /*getVideoCover(file, 1.5).then(function (cover) {
+          fileicon = cover;
+        });*/
+        item.innerHTML = '<img src = "' + fileicon + '" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
         item.addEventListener('click', function () {
           document.querySelector('style').innerHTML = '.content{top:25px;bottom:50px;position:fixed;width:100%;overflow:hidden;left:0;background-color:#000;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}';
-          machine(file);
+          playxfile(file);
 
         });
         item.addEventListener('focus', function () {
@@ -142,10 +163,14 @@ function externalCard() {
         item.className = 'listview file';
         item.tabIndex = ti;
         ti++;
-        item.innerHTML = '<img src = "ext.png" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
+        var fileicon = 'ext.png';
+        /*getVideoCover(file, 1.5).then(function (cover) {
+          fileicon = cover;
+        });*/
+        item.innerHTML = '<img src = "' + fileicon + '" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
         item.addEventListener('click', function () {
           document.querySelector('style').innerHTML = '.content{top:25px;bottom:50px;position:fixed;width:100%;overflow:hidden;left:0;background-color:#000;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}';
-          machine(file);
+          playxfile(file);
 
         });
         item.addEventListener('focus', function () {
@@ -194,7 +219,7 @@ function keydownfilter(e) {
         item.innerHTML = '<img src="ext.png" style="width: 20px;vertical-align: middle;margin-right: 5px">' + baseFileName(file.name.substring(file.name.lastIndexOf('/') + 1));
         item.addEventListener('click', function () {
           document.querySelector('style').innerHTML = '.content{top:25px;bottom:50px;position:fixed;width:100%;overflow:hidden;left:0;background-color:#000;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}';
-          machine(file);
+          playxfile(file);
         });
         item.addEventListener('focus', function () {
           document.querySelector('#fdet').innerHTML = '<table width="100%" style="color: black"><tr><td style="width: 50%;text-align: center">' + showSize(file.size) + '</td><td style="width: 50%;text-align: center">' + file.type + '</td></tr></table>';
@@ -218,6 +243,8 @@ function keydownfilter(e) {
 
 document.getElementById('filter').addEventListener('focus', function () { f2.innerHTML = 'OK'; });
 
+if (localStorage.getItem('listfocused') != null) { document.querySelectorAll('.focusable')[localStorage.getItem('listfocused')].focus(); targetElement.scrollIntoView({ block: 'center' }); }
+
 document.body.addEventListener('keydown', keydownvideolist);
 function keydownvideolist(e) {
   switch (e.key) {
@@ -235,15 +262,8 @@ function keydownvideolist(e) {
       break;
     case 'F2': localStorage.removeItem('opened_page'); window.location.href = 'index.html?act=loggedin';
       break;
-    case 'SoftLeft': var items = document.querySelectorAll('.file');
-      var targetElement = items[0];
-      targetElement.focus();
-      targetElement.scrollIntoView({ block: 'center' });
-      break;
-    case 'F1': var items = document.querySelectorAll('.file');
-      var targetElement = items[0];
-      targetElement.focus();
-      targetElement.scrollIntoView({ block: 'center' });
+    case 'SoftLeft':
+    case 'F1': document.querySelectorAll('.file')[0].focus().scrollIntoView({ block: 'center' });
       break;
   }
 
@@ -275,11 +295,4 @@ function keydownvideolist(e) {
   }
 }
 
-
-
-document.addEventListener('DOMContentLoaded', function () {
-
-  if (localStorage.getItem('listfocused') != null) { document.querySelectorAll('.focusable')[localStorage.getItem('listfocused')].focus();  targetElement.scrollIntoView({ block: 'center' }); } 
-
-  document.querySelector('#lbar').style.display = 'none';
-})
+document.addEventListener('DOMContentLoaded', () => { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); document.querySelector('#lbar').style.display = 'none'; });

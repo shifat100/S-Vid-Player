@@ -1,21 +1,19 @@
 try {
+    // --- Polyfills & Utilities ---
     String.prototype.includes = function (str) {
         return this.indexOf(str) !== -1;
     }
+
     function fileExtention(filename) {
-        var fsplit = filename.split(".");
-        var extention = fsplit[fsplit.length - 1];
-        return extention;
+        return filename.split(".").pop() || "";
     }
-
     function gup(name, loc = window.location.href) { name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]"); var regexS = "[\\?&]" + name + "=([^&#]*)"; var regex = new RegExp(regexS); var results = regex.exec(loc); if (results == null) return ""; else return results[1]; }
-
 
     function insertUrlParam(key, value) {
         if (history.pushState) {
-            let searchParams = new URLSearchParams(window.location.search);
+            var searchParams = new URLSearchParams(window.location.search);
             searchParams.set(key, value);
-            let newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + searchParams.toString();
+            var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + searchParams.toString();
             window.history.pushState({ path: newurl }, '', newurl);
         }
     }
@@ -27,19 +25,101 @@ try {
         const newUrl = r.href;
         window.history.pushState({ path: newUrl }, '', newUrl);
     }
+
+    // --- Custom MPA File Decoder ---
+    function decodeMPAFile(file) {
+        const SEPARATOR_STRING = '[shifat100]';
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                try {
+                    const arrayBuffer = event.target.result;
+                    const fileBytes = new Uint8Array(arrayBuffer);
+                    const separatorBytes = new TextEncoder().encode(SEPARATOR_STRING);
+                    var separatorIndex = -1;
+
+                    // Efficiently find the separator index
+                    for (var i = 0; i <= fileBytes.length - separatorBytes.length; i++) {
+                        var found = true;
+                        for (var j = 0; j < separatorBytes.length; j++) {
+                            if (fileBytes[i + j] !== separatorBytes[j]) {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            separatorIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (separatorIndex !== -1) {
+                        // Separator found: It's a video file with custom audio
+                        const audioData = arrayBuffer.slice(0, separatorIndex);
+                        const videoData = arrayBuffer.slice(separatorIndex + separatorBytes.length);
+                        const audioBlob = new Blob([audioData], { type: 'audio/mp4' });
+                        const videoBlob = new Blob([videoData], { type: 'video/mp4' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const videoUrl = URL.createObjectURL(videoBlob);
+                        resolve({ audioUrl, videoUrl, isAudioOnly: false });
+                    } else {
+                        // No separator: It's a pure audio file
+                        const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp4' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        resolve({ audioUrl, videoUrl: null, isAudioOnly: true });
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            };
+
+            reader.onerror = () => {
+                reject(new Error('Failed to read the file.'));
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // --- Global State ---
     var filename, filesize, filetype, filelastmodifieddate, filepath, playingindex;
+    var activeKeydownHandler = null;
+    var activeKeyupHandler = null;
+
+    // =========================================================================
+    // DEDICATED MPA PLAYER FUNCTION
+    // This is the core function, now exclusively handling .mpa files.
+    // =========================================================================
     function playVid(originalBlob) {
-        var blob = new Blob([originalBlob], { type: 'video/mp4' });
-        var blobtype = blob.type;
-        var path = URL.createObjectURL(blob);
+        // --- Cleanup Previous Player State ---
+        if (activeKeydownHandler) {
+            document.body.removeEventListener('keydown', activeKeydownHandler);
+        }
+        if (activeKeyupHandler) {
+            document.body.removeEventListener('keyup', activeKeyupHandler);
+        }
+
+        // --- Setup DOM Elements ---
         var header = document.getElementsByClassName('header')[0];
         var f1 = document.querySelectorAll('.footerelement')[0];
         var f2 = document.querySelectorAll('.footerelement')[1];
         var f3 = document.querySelectorAll('.footerelement')[2];
         var app = document.getElementById('playerscreen');
-        var scale = 1;
-        var rotate = 0;
-        var fscreen = 'no';
+
+        app.innerHTML = '';
+        app.style = 'background-color: black;';
+        app.innerHTML = `<video id="player" autoplay></video>
+                         <audio id="player1" mozaudiochannel="content"></audio>
+                         <div id="pp"></div>
+                         <div id="details"></div>`;
+
+        var vp = document.querySelector('#player');
+        var ap = document.querySelector('#player1');
+
+        // --- Player State Variables ---
+        var scale = 1, rotate = 0, fscreen = 'no';
         var volume = navigator.volumeManager;
         filename = baseFileName(originalBlob.name);
         filesize = showSize(originalBlob.size);
@@ -47,189 +127,62 @@ try {
         filelastmodifieddate = originalBlob.lastModifiedDate;
         filepath = originalBlob.name.replace('sdcard/', 'Internal/').replace('sdcard1/', 'SD Card/');
         playingindex = filenamearray.indexOf(baseFileName(originalBlob.name));
-        var issub = false;
-        var subon = true;
-        var ispaused = false;
-        var isrepeat = false;
-        var isrestored = false;
-
+        var ispaused = false, isrepeat = false, isrestored = false;
         var tstime = 0;
         var checkbgplaycommand = 'false';
 
-        header.innerHTML = baseFileName(originalBlob.name);
-        app.style = 'background-color: black;';
-        app.innerHTML = `<video id="player" type="${blobtype}" autoplay>
-        <source id="vidsrc" src="${path}" type="${blobtype}">
-        </source>
-        </video><audio id="player1" src="${path}" mozaudiochannel="content" ></audio>
-        <div id="subtitle" style="background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;"></div><div id="pp"></div>
-        <div id="details"></div>`;
+        header.innerHTML = filename;
         f1.innerHTML = 'Fullscreen';
         f2.innerHTML = 'Pause';
-        f3.innerHTML = 'Restore';
-        var vp = document.querySelector('#player');
-        var ap = document.querySelector('#player1');
+        f3.innerHTML = 'Mute';
 
-        /*vp.mozAudioChannelType = 'content'; mozAudioChannelType="alarm"*/
-        var subtitleBar = document.getElementById('subtitle');
+        // --- Core MPA Decoding and Playback Logic ---
+        decodeMPAFile(originalBlob)
+            .then(({ audioUrl, videoUrl, isAudioOnly }) => {
+                if (!isAudioOnly) {
+                    // CASE 1: MPA file WITH separator (audio + video)
+                    header.innerHTML = filename;
+                    vp.src = videoUrl;
+                    ap.src = audioUrl;
+                    vp.muted = true; // Video is muted; sound comes from the audio element.
 
-        if (gup("ref") == "filelist") {
-            if (localStorage.getItem(filename) != null) {
-                vp.pause();
-                if (window.confirm("Resume Previous Playback ?")) {
-                    vp.currentTime = localStorage.getItem(filename);
-                    vp.play();
-                } else {
-                    vp.currentTime = 0;
-                    vp.play();
-                }
-            }
-        } else {
-            if (localStorage.getItem(filename) != null) {
-                vp.pause();
-                vp.currentTime = localStorage.getItem(filename);
-                vp.play();
-            } else {
-                vp.currentTime = 0;
-                vp.play();
-            }
-        }
-
-
-
-
-        function addZero(n) { return n < 10 ? '0' + n : n }
-        function zoomIn() { scale += 0.1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
-        function zoomOut() { scale -= 0.1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
-        function rotateVid(n) { rotate += n; if (rotate > 360) { rotate = 0; } if (rotate < -360) { rotate = 0; } vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; }
-        function defaultScreen() { scale = 1; rotate = 0; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; vp.playbackRate = 1; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } }
-        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);z-index: 998'; document.querySelectorAll('#details')[0].style = 'display: none;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 999'; } else { subtitleBar.style = 'display: none'; } }
-        function exitFullScreen() { fscreen = 'no'; app.style = 'top: 25px; bottom:50px; z-index: 0;'; rotate = 0; scale = 1; vp.style = 'transform: scale(' + scale + ') rotate(' + rotate + 'deg);'; document.querySelectorAll('#details')[0].style = 'display: block;'; if (subon === true) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; } else { subtitleBar.style = 'display: none'; } }
-
-        function parseVTT(vttText) {
-            var subtitles = [];
-            var lines = vttText.split('\n');
-            var currentSubtitle = null;
-
-            lines.forEach(line => {
-                if (line.includes('-->')) {
-                    var times = line.split(' --> ');
-                    currentSubtitle = {
-                        start: parseTime(times[0]),
-                        end: parseTime(times[1]),
-                        text: ''
+                    // Sync audio and video playback
+                    vp.onplay = () => ap.play();
+                    vp.onpause = () => ap.pause();
+                    vp.onseeking = () => {
+                        if (Math.abs(vp.currentTime - ap.currentTime) > 0.5) {
+                            ap.currentTime = vp.currentTime;
+                        }
                     };
-                } else if (currentSubtitle && line.trim() !== '') {
-                    currentSubtitle.text += line.trim() + ' ';
-                } else if (line.trim() === '') {
-                    if (currentSubtitle) {
-                        subtitles.push(currentSubtitle);
-                        currentSubtitle = null;
-                    }
+                } else {
+                    // CASE 2: MPA file WITHOUT separator (audio only)
+                    header.innerHTML = filename + " (Audio)";
+                    // Play audio through the <video> tag to use its visual controls and fullscreen capability
+                    vp.src = audioUrl;
+                    ap.src = ''; // Ensure the dedicated audio element is not used.
+                    vp.muted = false; // Unmute the video element to hear the audio.
                 }
+
+                // Resume from last position if available
+                var savedTime = localStorage.getItem(filename);
+                if (savedTime) {
+                    vp.currentTime = parseFloat(savedTime);
+                }
+                vp.play();
+            })
+            .catch(err => {
+                showToast('Error playing MPA: ' + err.message);
+                console.error(err);
             });
 
-            if (currentSubtitle) {
-                subtitles.push(currentSubtitle);
-            }
-
-            return subtitles;
-        }
-
-
-        function parseSRT(srtText) {
-            var subtitles = [];
-            var lines = srtText.split('\n');
-            var currentSubtitle = null;
-
-            lines.forEach(line => {
-                if (/^\d+$/.test(line.trim())) {
-                    if (currentSubtitle) {
-                        subtitles.push(currentSubtitle);
-                    }
-                    currentSubtitle = { start: 0, end: 0, text: '' };
-                } else if (line.includes('-->')) {
-                    var times = line.split(' --> ');
-                    currentSubtitle.start = parseTime(times[0]);
-                    currentSubtitle.end = parseTime(times[1]);
-                } else if (currentSubtitle && line.trim() !== '') {
-                    currentSubtitle.text += line.trim() + ' ';
-                }
-            });
-
-            if (currentSubtitle) {
-                subtitles.push(currentSubtitle);
-            }
-
-            return subtitles;
-        }
-
-        function parseTime(timeString) {
-            var parts = timeString.split(':');
-            var secondsParts = parts[2].split('.');
-            var hours = parseInt(parts[0], 10);
-            var minutes = parseInt(parts[1], 10);
-            var seconds = parseInt(secondsParts[0], 10);
-            var milliseconds = parseInt(secondsParts[1] || '0', 10);
-
-            return (hours * 3600) + (minutes * 60) + seconds + (milliseconds / 1000);
-        }
-
-        function getSubtitleForTime(subtitles, time) {
-            for (var i = 0; i < subtitles.length; i++) {
-                if (time >= subtitles[i].start && time <= subtitles[i].end) {
-                    return subtitles[i];
-                }
-            }
-            return null;
-        }
-
-        navigator.getDeviceStorages('sdcard').forEach(sdcard => {
-            var request = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), 'vtt'));
-
-            request.onsuccess = function () {
-                var fileReader = new FileReader();
-                fileReader.onload = function () {
-                    subon = true;
-                    issub = true;
-                    var data = fileReader.result;
-                    subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-                    var subtitles = parseVTT(data);
-                    vp.addEventListener('timeupdate', () => {
-                        var currentTime = vp.currentTime;
-                        var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
-                        subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
-                    });
-                }
-                fileReader.readAsText(request.result);
-            }
-            request.onerror = function () {
-                var request1 = sdcard.get(originalBlob.name.replace(fileExtention(originalBlob.name), 'srt'));
-
-                request1.onsuccess = function () {
-                    var fileReader = new FileReader();
-                    fileReader.onload = function () {
-                        subon = true;
-                        issub = true;
-                        var data = fileReader.result;
-                        subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1';
-                        var subtitles = parseSRT(data);
-                        vp.addEventListener('timeupdate', () => {
-                            var currentTime = vp.currentTime;
-                            var currentSubtitle = getSubtitleForTime(subtitles, currentTime);
-                            subtitleBar.textContent = currentSubtitle ? currentSubtitle.text : '';
-                        });
-                    }
-
-                    fileReader.readAsText(request1.result);
-                }
-                request1.onerror = function () {
-                    subon = false;
-                    issub = false;
-                    subtitleBar.style.display = 'none';
-                };
-            };
-        });
+        // --- Helper functions and Event Handlers ---
+        function addZero(n) { return n < 10 ? '0' + n : n }
+        function zoomIn() { scale += 0.1; vp.style.transform = `scale(${scale}) rotate(${rotate}deg)`; }
+        function zoomOut() { scale -= 0.1; vp.style.transform = `scale(${scale}) rotate(${rotate}deg)`; }
+        function rotateVid(n) { rotate = (rotate + n) % 360; vp.style.transform = `scale(${scale}) rotate(${rotate}deg)`; }
+        function defaultScreen() { scale = 1; rotate = 0; vp.style.transform = `scale(${scale}) rotate(${rotate}deg)`; vp.playbackRate = 1; }
+        function openFullScreen() { fscreen = 'yes'; app.style = 'top: 0px; bottom:0px;z-index: 50;display: flex;justify-content: center;align-items: center;'; rotate = 90; scale = 1.36; vp.style.transform = `scale(${scale}) rotate(${rotate}deg)`; vp.style.zIndex = 998; document.querySelector('#details').style.display = 'none'; }
+        function exitFullScreen() { fscreen = 'no'; app.style = 'top: 25px; bottom:50px; z-index: 0;'; rotate = 0; scale = 1; vp.style.transform = `scale(${scale}) rotate(${rotate}deg)`; document.querySelector('#details').style.display = 'block'; }
 
         function zero() {
             var e = document.createElement('div');
@@ -256,7 +209,6 @@ try {
                 document.body.addEventListener('keyup', keyupmain);
             });
 
-
             document.querySelectorAll('.zerolist')[0].focus();
             document.body.removeEventListener('keydown', keydownmain);
             document.body.removeEventListener('keyup', keyupmain);
@@ -268,7 +220,7 @@ try {
             var s = 5;
             var e = document.createElement('div');
             e.style = 'display: flex;position: fixed; top: 0px; left: 0px; width: 100%; height: 100%;background: rgba(0,0,0,0.5); justify-content: center; align-items: center;z-index: 55';
-            e.innerHTML = '<div style="width: 80%;height:auto; background: white; border-radius: 10px; display: block; padding:10px 5px 5px 7px"><p><b>Name:</b> ' + filename + '</p><p><b>Size:</b> ' + filesize + '</p><p><b>Type:</b> ' + filetype + '</p><p><b>Resolution:</b> ' + vp.videoWidth + 'x' + vp.videoHeight + '</p><p><b>Last Modified:</b> ' + filelastmodifieddate + '</p><p><b>Path:</b> ' + filepath + '</p><br><center><div style="position: relative; padding: 5px; width: auto; display: block; bottom: 0px; left: 0px; background: black; color: white;border-radius:10px">Wait <x id="stc">5</x>s To Close</div></center></div>';
+            e.innerHTML = `<div style="width: 80%;height:auto; background: white; border-radius: 10px; display: block; padding:10px 5px 5px 7px"><p><b>Name:</b> ${filename}</p><p><b>Size:</b> ${filesize}</p><p><b>Type:</b> ${filetype}</p><p><b>Resolution:</b> ${vp.videoWidth}x${vp.videoHeight}</p><p><b>Last Modified:</b> ${filelastmodifieddate}</p><p><b>Path:</b> ${filepath}</p><br><center><div style="position: relative; padding: 5px; width: auto; display: block; bottom: 0px; left: 0px; background: black; color: white;border-radius:10px">Wait <x id="stc">5</x>s To Close</div></center></div>`;
             var k = setInterval(function () { if (s > 0) { s -= 1; document.getElementById('stc').innerHTML = s; } }, 1000);
             document.body.appendChild(e);
             setTimeout(function () { document.body.removeChild(e); s = 5; clearInterval(k); }, 5000);
@@ -279,6 +231,7 @@ try {
         }
 
         function settings() {
+            // This function remains the same as it controls app-wide settings.
             document.body.removeChild(document.querySelector('#zerobar'));
             var e = document.createElement('div');
             e.id = 'settings';
@@ -320,12 +273,9 @@ try {
                 }
             });
 
-
-
             if (localStorage.getItem('bgplay') == 'yes') {
                 bgplaybtn.setAttribute('checked', 'check');
             }
-
             if (localStorage.getItem('islocked') == 'yes') { lockbtn.setAttribute('checked', 'check'); document.querySelector('#inputpass').placeholder = '******'; }
             if (localStorage.getItem('filetypes') !== null) { document.querySelector('#extentions').value = localStorage.getItem('filetypes'); }
 
@@ -338,9 +288,6 @@ try {
             document.body.addEventListener('keydown', keydownsetting);
         }
 
-        document.body.addEventListener('keydown', keydownmain);
-        document.body.addEventListener('keyup', keyupmain);
-
         function keydownmain(e) {
             if (e.key == 'Enter') { if (vp.paused) { vp.play(); f2.innerHTML = 'Pause'; showToast('Playback Resumed'); ispaused = false; } else { vp.pause(); f2.innerHTML = 'Play'; showToast('Playback Paused'); ispaused = true; } }
             if (e.key == 'ArrowLeft') { vp.currentTime -= 10; }
@@ -350,9 +297,9 @@ try {
             if (e.key == '6') { tstime = new Date().getTime(); }
             if (e.key == '2') { vp.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
             if (e.key == '4') { tstime = new Date().getTime(); }
-            if (e.key == '3') { tstime = new Date().getTime(); clearInterval(timebar); }
+            if (e.key == '3') { rotateVid(+10); }
             if (e.key == '5') { tstime = new Date().getTime(); }
-            if (e.key == '1') { tstime = new Date().getTime(); clearInterval(timebar); }
+            if (e.key == '1') { rotateVid(-10); }
             if (e.key == '7') {
                 clearInterval(timebar);
                 document.body.removeEventListener('keydown', keydownmain);
@@ -364,26 +311,13 @@ try {
                 vp.pause();
                 ap.src = '';
                 vp.src = '';
-                document.querySelector('style').innerHTML = '';
                 header.innerHTML = 'Videos';
                 f1.innerHTML = 'Search';
                 f2.innerHTML = 'Open';
                 f3.innerHTML = 'Back';
                 document.body.removeChild(app);
-                localStorage.setItem('isrestored', 'false');
-                //document.querySelectorAll('.focusable')[localStorage.getItem('listfocused')].focus();
-                //window.location.href = '/files.html?ref=filelist';
-
             }
-            if (e.key == '8') {
-                if (issub) {
-                    if (subon == true) { subon = false; subtitleBar.style.display = 'none'; showToast('Subtitle Off'); } else {
-                        subon = true;
-                        if (rotate == 90) { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;top: auto;width: 100%;left: -99px;color: white;text-align: center;transform: rotate(90deg);display:block;z-index: 51'; } else { subtitleBar.style = 'background: rgba(0,0,0,1);padding: 0px;position: absolute;bottom: 20px;width: 100%;left: 0px;color: white; text-align: center;display:block;z-index: 1'; }
-                        showToast('Subtitle On');
-                    }
-                } else { showToast('No Subtitle Found'); }
-            }
+            // Key '8' for subtitles is removed.
             if (e.key == '9') { tstime = new Date().getTime(); }
             if (e.key == '*') { zoomOut(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
             if (e.key == '#' || e.key == '/') { zoomIn(); showToast('Playback Zoom `' + scale.toFixed(1) + 'x`'); }
@@ -391,22 +325,10 @@ try {
             if (e.key == 'SoftLeft' || e.key == 'F1') { if (fscreen == 'yes') { exitFullScreen(); showToast('Closed FullScreen'); } else { openFullScreen(); } }
 
             if (e.key == 'SoftRight' || e.key == 'F2') {
-                isrestored = true;
-                localStorage.setItem('isrestored', 'true');
-                app.classList = '';
-                vp.style = 'position: fixed; width: 120px; bottom: 50px; right: 0px;';
-                document.querySelector('#fdet').style.display = 'block';
-                document.querySelectorAll('#subtitle')[0].style = 'display: none;';
-                header.innerHTML = 'Videos';
-                f1.innerHTML = 'Search';
-                f2.innerHTML = 'Open';
-                f3.innerHTML = 'Maximize';
-                document.body.removeEventListener('keydown', keydownmain);
-                document.body.removeEventListener('keyup', keyupmain);
-                document.body.addEventListener('keydown', keydownvideolist1);
-
+                if (ap.muted == true) { ap.muted = false; f3.innerHTML = 'Mute'; } else {
+                    ap.muted = true; f3.innerHTML = 'Unmute';
+                }
             }
-
             if (e.key === 'Call' || e.key == 's') {
                 var canvas = document.createElement('canvas');
                 canvas.style.display = 'none';
@@ -429,59 +351,38 @@ try {
 
         function keyupmain(e) {
             if (e.key == '4') { if ((new Date().getTime() - tstime) < 1000) { vp.playbackRate -= 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); } else { vp.currentTime -= 200; } }
-
             if (e.key == '2') { vp.playbackRate = 1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); }
             if (e.key == '6') { if ((new Date().getTime() - tstime) < 1000) { vp.playbackRate += 0.1; showToast('Playback Speed `' + vp.playbackRate.toFixed(1) + 'x`'); } else { vp.currentTime += 200; } }
 
-            if (e.key == '1') {
-                if ((new Date().getTime() - tstime) < 1000) {
-                    rotateVid(-10);
-                } else {
-                    if ((playingindex - 1) > -1 && playingindex != -1) {
-                        removeUrlParameter('ref');
-                        playingindex = playingindex - 1;
-                        document.body.removeEventListener('keydown', keydownmain);
-                        document.body.removeEventListener('keyup', keyupmain);
-                        playVid(files[playingindex]);
-                    } else {
-                        showToast('No Video Found');
-                    }
-                }
-            }
+
 
             if (e.key == '5') {
                 if ((new Date().getTime() - tstime) < 1000) {
                     defaultScreen(); showToast('Default Playback');
                 } else {
-                    if (isrepeat == false) { vp.setAttribute('loop', Infinity); ap.setAttribute('loop', Infinity); showToast('Repeat Playback On'); } else {
-                        vp.removeAttribute('loop'); ap.removeAttribute('loop'); showToast('Repeat Playback Off');
-                    }
+                    isrepeat = !isrepeat; // Toggle repeat status
+                    vp.loop = isrepeat;
+                    ap.loop = isrepeat;
+                    showToast(isrepeat ? 'Repeat Playback On' : 'Repeat Playback Off');
                 }
             }
 
-            if (e.key == '3') {
-                if ((new Date().getTime() - tstime) < 1000) {
-                    rotateVid(+10);
-                } else {
-                    if ((playingindex + 1) < files.length && playingindex != -1) {
-                        removeUrlParameter('ref');
-                        playingindex = playingindex + 1;
-                        document.body.removeEventListener('keydown', keydownmain);
-                        document.body.removeEventListener('keyup', keyupmain);
-                        playVid(files[playingindex]);
-                    } else {
-                        showToast('No Video Found');
-                    }
-                }
-            }
+
 
             if (e.key == '9') {
                 if ((new Date().getTime() - tstime) < 1000) {
-                    var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 60 * 60) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); }
+                    var des = window.prompt('Destination (00:00:00)', '00:00:00'); var regexp = /[0-9]\d:[0-9]\d:[0-9]\d/; if (regexp.test(des)) { var h = new Number(des.split(':')[0]); var m = new Number(des.split(':')[1]); var s = new Number(des.split(':')[2]); var cal = (h * 3600) + (m * 60) + s; if (cal < vp.duration) { vp.currentTime = cal; showToast('Video Forwarded To: <b>' + des + '</b>'); } else { showToast('Invalid Destination'); } } else { showToast('Invalid Input Format'); }
                 } else { vp.pause(); vp.currentTime = 0; vp.play(); }
             }
         }
 
+        document.body.addEventListener('keydown', keydownmain);
+        document.body.addEventListener('keyup', keyupmain);
+        activeKeydownHandler = keydownmain;
+        activeKeyupHandler = keyupmain;
+
+        // --- Other key handlers (keydownzero, keydownsetting, etc.) remain unchanged ---
+        // These are included here for completeness...
         function keydownzero(e) {
             switch (e.key) {
                 case 'ArrowDown': focus(1);
@@ -512,7 +413,6 @@ try {
                 targetElement.scrollIntoView({ block: 'center' });
             }
         }
-
         function keydownsetting(e) {
             switch (e.key) {
                 case 'ArrowDown': focus(1);
@@ -555,7 +455,6 @@ try {
                 targetElement.scrollIntoView({ block: 'center' });
             }
         }
-
         function keydownvideolist1(e) {
             switch (e.key) {
                 case 'ArrowDown': focus(1);
@@ -571,7 +470,6 @@ try {
                 case 'SoftRight':
                 case 'F2':
                     isrestored = false;
-                    localStorage.setItem('isrestored', 'false');
                     app.classList = 'content';
                     vp.style = 'background: black';
                     document.querySelector('#fdet').style.display = 'none';
@@ -628,18 +526,20 @@ try {
         }
 
         var timebar = setInterval(function () {
+            if (!document.getElementById('playerscreen')) {
+                clearInterval(timebar);
+                return;
+            }
             var rand = Math.floor(Math.random() * 255) + 100;
             rand = 33;
             if (isrestored === false) {
-                document.querySelector('#details').innerHTML = '<table width="100%" style="color: white"><tr><td style="width: 50%;text-align: center">' + (addZero(new Date(vp.currentTime * 1000).getHours() - 6) + ':' + addZero(new Date(vp.currentTime * 1000).getMinutes()) + ':' + addZero(new Date(vp.currentTime * 1000).getSeconds()) + '/' + addZero(new Date(vp.duration * 1000).getHours() - 6) + ':' + addZero(new Date(vp.duration * 1000).getMinutes()) + ':' + addZero(new Date(vp.duration * 1000).getSeconds()) + '</td><td style="width: 50%;text-align: center">' + vp.playbackRate.toFixed(1)) + ' X</td></tr></table>';
+                document.querySelector('#details').innerHTML = `<table width="100%" style="color: white"><tr><td style="width: 50%;text-align: center">${(addZero(new Date(vp.currentTime * 1000).getUTCHours()) + ':' + addZero(new Date(vp.currentTime * 1000).getMinutes()) + ':' + addZero(new Date(vp.currentTime * 1000).getSeconds()))}/${(addZero(new Date(vp.duration * 1000).getUTCHours()) + ':' + addZero(new Date(vp.duration * 1000).getMinutes()) + ':' + addZero(new Date(vp.duration * 1000).getSeconds()))}</td><td style="width: 50%;text-align: center">${vp.playbackRate.toFixed(1)} X</td></tr></table>`;
             } else { document.querySelector('#details').innerHTML = ''; }
 
 
-            if (fscreen == 'yes' || isrestored === true) { document.querySelector('#pp').style = 'display:none'; } else { document.querySelector('#pp').style = 'width:' + ((vp.currentTime / vp.duration) * 100 + '%;display: block; padding: 1px 0px;background: rgb(' + (((vp.currentTime / vp.duration) * 100).toFixed(0) * 2.5).toFixed(0) + ',' + (255 - (((vp.currentTime / vp.duration) * 100).toFixed(0) * 2.5).toFixed(0)) + ',' + rand + ');position:fixed; bottom: 49px; left: 0px;z-index: 5;border-right: 5px groove white;'); }
+            if (fscreen == 'yes' || isrestored === true) { document.querySelector('#pp').style.display = 'none'; } else { document.querySelector('#pp').style = `width:${((vp.currentTime / vp.duration) * 100)}%;display: block; padding: 1px 0px;background: rgb(${(((vp.currentTime / vp.duration) * 100).toFixed(0) * 2.5).toFixed(0)},${(255 - (((vp.currentTime / vp.duration) * 100).toFixed(0) * 2.5).toFixed(0))},${rand});position:fixed; bottom: 49px; left: 0px;z-index: 5;border-right: 5px groove white;`; }
 
-
-
-            if (((vp.currentTime / vp.duration) * 100) == 100) {
+            if (vp.ended) {
                 localStorage.removeItem(filename);
                 vp.pause();
                 ispaused = true;
@@ -666,7 +566,7 @@ try {
                     }
                 } else {
                     if (ispaused === true) { ap.pause(); vp.pause(); } else {
-                        ap.pause();
+                        ap.play();
                         vp.currentTime = localStorage.getItem(filename);
                         vp.play();
                         console.log('app showed');
@@ -674,59 +574,21 @@ try {
                 }
             });
         }
-
-
-
-        function scaleVideo() {
-            var w = window.innerWidth;
-            var h = window.innerHeight;
-
-            if (w / 16 >= h / 9) {
-                vp.setAttribute('width', w);
-                vp.setAttribute('height', 'auto');
-            } else {
-                vp.setAttribute('width', 'auto');
-                vp.setAttribute('height', h);
-            }
-        }
-
-        if (localStorage.getItem('autoscale') == 'yes') { scaleVideo(); } else { }
-
     }
 
-
-    function machine(blob) {
-
-        if (document.querySelector('#playerscreen')) {
-            filename = baseFileName(blob.name);
-            filesize = showSize(blob.size);
-            filetype = blob.type;
-            filelastmodifieddate = blob.lastModifiedDate;
-            filepath = blob.name.replace('sdcard/', 'Internal/').replace('sdcard1/', 'SD Card/');
-            playingindex = filenamearray.indexOf(baseFileName(blob.name));
-            var vp = document.querySelector('#player');
-            var ap = document.querySelector('#player1');
-            vp.pause();
-            var path = URL.createObjectURL(blob);
-            vp.src = path;
-            ap.src = path;
-            if (localStorage.getItem(filename) != null) {
-                vp.currentTime = localStorage.getItem(filename);
-            }
-            vp.play();
-
-        } else {
+    // --- Media Orchestration (Simplified for MPA only) ---
+    function plaympa(blob) {
+        if (!document.querySelector('#playerscreen')) {
             document.body.removeEventListener('keydown', keydownvideolist);
             document.querySelector('#fdet').style.display = 'none';
             var el = document.createElement('div');
             el.id = 'playerscreen';
             el.className = 'content';
             document.body.appendChild(el);
-            playVid(blob);
             showToast('Press 7 To File List');
         }
+        playVid(blob);
     }
-
 
 
     function hideFile(blob) {
@@ -798,22 +660,14 @@ try {
         }
     }
 
-
-    document.addEventListener('DOMContentLoaded', () => { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); });
-
-    //setInterval(function() { getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } }); }, 20000);
+    document.addEventListener('DOMContentLoaded', () => {
+        getKaiAd({ publisher: '080b82ab-b33a-4763-a498-50f464567e49', app: 's-vid_player', slot: 's-vid_player', onerror: err => console.error('Custom catch:', err), onready: ad => { ad.call('display'); } });
+    });
 
     document.body.addEventListener('click', function () {
         console.info('Width: ' + window.innerWidth + '\nHeight: ' + window.innerHeight);
     });
 
-
-
-
-
-
 } catch (e) {
     showToast('<b>error:</b> ' + e.message);
 }
-
-

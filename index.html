@@ -11,23 +11,24 @@
     <div class="header">Help</div>
     <div class="content" style="background-color: white;bottom: 27px;box-shadow: inset 0px 0px 10px 5px #ddd;">
         <ul>
-            <li><b>0</b>: Video Details / Settings</li>
-            <li><b>1 / 2 / 3</b>: Control Playback Speed</li>
-            <li><b>4 / 6</b>: Control Video Rotation</li>
+            <li><b>0</b>: Video Details / Settings / Mute</li>
+            <li><b>1 / 3</b>: Control Video Rotation</li>
+            <li><b>4 / 6</b>: Control Playback Speed</li>
             <li><b>5</b>: Default Playback</li>
             <li><b>7</b>: Files List</li>
             <li><b>8</b>: Toggle Subtitle</li>
             <li><b>9</b>: Jump To Time</li>
             <li><b>* / #</b>: Zoom Out / In</li>
             <li><b>SoftLeft</b>: Toggle Fullscreen</li>
-            <li><b>SoftRight</b>: Mute / Unmute</li>
+            <li><b>SoftRight</b>: Restore / Maximize</li>
             <li><b>Enter</b>: Play / Pause</li>
             <li><b>ArrowUp </b>: Volume Up</li>
             <li><b>ArrowDown</b>: Volume Down</li>
             <li><b>ArrowLeft </b>: 10 sec Backward</li>
             <li><b>ArrowRight</b>: 10 sec Forward</li>
+            <!-- <center><b style="color: rgb(255, 0, 0);">( Also Hold Keys 1sec To More Func )</b></center> -->
             <input type="file"
-                onchange="playVid(this.files[0]);document.body.removeEventListener('keydown', keydownpick);"
+                onchange="var el = document.createElement('div');el.id = 'playerscreen';el.className = 'content';document.body.appendChild(el);playVid(this.files[0]);document.body.removeEventListener('keydown', keydownpick);"
                 style="display: none;">
         </ul>
     </div>

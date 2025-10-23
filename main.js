@@ -1,3 +1,30 @@
+    if (localStorage.getItem('viewrelesenote') == null) {
+      document.body.style = 'background:#fff; padding:10px';
+      document.body.innerHTML = '<b><center>- What\'s New -</center></b><br><font style="font-size: 12px"><b>Version <span id="version">1.0.0</span></b><br><br><small id="changelog">* Can Play Video File On Background Globally (before it was only for minimize)<br>* Video Hide And Show Fixed <br>* Subtitle On Off fixed <br>* Others All bugs are fixed</small></font><div style="width: 100%;text-align: center; font-weight: bold;background: #dedede; padding:5px 0px; margin-top:10px; position: fixed; left: 0px;bottom: 0px;"><b>OK</b></div>';
+      document.addEventListener('keydown', function (e) {
+        if (e.key == 'Enter') {
+          localStorage.setItem('viewrelesenote', 'yes');
+          if (window.confirm('Restart Required. Want To Continue ?')) { window.close(); }
+        }
+      });
+  
+      var xhttp = new XMLHttpRequest();
+      xhttp.onload = function () {
+        var json = JSON.parse(this.responseText);
+        var v = json.version;
+        document.getElementById('version').innerHTML = v;
+         document.getElementById('changelog').innerHTML = json.changelog;
+      }
+      xhttp.open('GET', 'manifest.webapp', true);
+      xhttp.send();
+    } else {
+  
+  
+
+
+
+
+
 if (localStorage.getItem('islocked') == 'yes' && gup('act', window.location.href) == '') {
     var pass = prompt('Enter PassWord: ');
     var spass = localStorage.getItem('lockedpass');
@@ -35,7 +62,7 @@ function settings() {
     var e = document.createElement('div');
     e.id = 'settings';
     e.style = 'display: flex;position: fixed; top: 0px; left: 0px; width: 100%; height: 100%;background: rgba(0,0,0,0.5); justify-content: center; align-items: center;z-index: 55';
-    e.innerHTML = '<div style="width: 100%;height:auto; background: white; border-radius: 10px; display: block; padding:10px 5px 5px 7px"><div class="header">Setting</div><div class="content" style="background: white; bottom: 29px;display: block; padding: 20px">Extentions For Scan:<br><input type="text" value="mp4, 3gp, mkv" class="focusable" tabindex="0" id="extentions"><br>Play In Background: <input type="checkbox" id="bgplaybtn" class="focusable" tabindex="1" style="display: inline-block; width: auto;"><br>Lock: <input type="checkbox" id="lockbtn" class="focusable" tabindex="2" style="display: inline-block; width: auto;"><br><input type="text" id="inputpass" disabled="disable" placeholder="pass"><br><button id="resetbtn" class="focusable" tabindex="3">Reset</button></div><div class="footer"><div class="footerelement">Save</div><div class="footerelement">OK</div><div class="footerelement">Back</div></div></div>';
+    e.innerHTML = '<div style="width: 100%;height:auto; background: white; border-radius: 10px; display: block; padding:10px 5px 5px 7px"><div class="header">Setting</div><div class="content" style="background: white; bottom: 29px;display: block; padding: 20px">Extentions For Scan:<br><input type="text" value="mp4, 3gp, mkv, mpa" class="focusable" tabindex="0" id="extentions"><br>Play In Background: <input type="checkbox" id="bgplaybtn" class="focusable" tabindex="1" style="display: inline-block; width: auto;"><br>Lock: <input type="checkbox" id="lockbtn" class="focusable" tabindex="2" style="display: inline-block; width: auto;"><br><input type="text" id="inputpass" disabled="disable" placeholder="pass"><br><button id="resetbtn" class="focusable" tabindex="3">Reset</button></div><div class="footer"><div class="footerelement">Save</div><div class="footerelement">OK</div><div class="footerelement">Back</div></div></div>';
     document.body.appendChild(e);
 
     var lockbtn = document.querySelector('#lockbtn');
@@ -116,4 +143,5 @@ function keydownsetting(e) {
         targetElement.focus();
         targetElement.scrollIntoView({ block: 'center' });
     }
+}
 }

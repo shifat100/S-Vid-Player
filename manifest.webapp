@@ -73,7 +73,7 @@
       "href": "/share.html",
       "filters": {
         "filenames": {
-          "pattern": ".*(mp|3g|mp4|3gp|mp3|3gpp|ja|mkv|m4)$",
+          "pattern": ".*(mp|3g|mp4|3gp|mp3|3gpp|ja|mkv|m4|mpa)$",
           "patternFlags": "gi"
         }
       },
@@ -81,6 +81,7 @@
       "returnValue": true
     }
   },
-  "version": "1.8.0",
-  "cursor": false
+  "version": "2.2.1",
+  "cursor": false,
+  "changelog": "1. Added .mpa (a modified custom file) player<br>2.fix All Other Bugs"
 }
