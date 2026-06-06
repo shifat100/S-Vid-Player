@@ -353,7 +353,8 @@ try {
             if (e.key == '3') { tstime = new Date().getTime(); clearInterval(timebar); }
             if (e.key == '5') { tstime = new Date().getTime(); }
             if (e.key == '1') { tstime = new Date().getTime(); clearInterval(timebar); }
-            if (e.key == '7') {
+            if (e.key == '7' || e.key == 'EndCall' || e.key == 'Backspace') {
+                e.preventDefault();
                 clearInterval(timebar);
                 document.body.removeEventListener('keydown', keydownmain);
                 document.body.removeEventListener('keyup', keyupmain);
