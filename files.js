@@ -284,14 +284,24 @@ function keydownvideolist(e) {
   }
 
   function focus(move) {
-    var currentIndex = document.activeElement.tabIndex;
-    var next = currentIndex + move;
-    if (next > document.querySelectorAll('.file').length - 1) { next = 0; } else if (next < 0) { next = document.querySelectorAll('.file').length - 1; }
     var items = document.querySelectorAll('.file');
+    if (items.length === 0) return;
+    var currentIndex = Array.from(items).indexOf(document.activeElement);
+    if (currentIndex === -1) {
+      currentIndex = 0;
+    }
+    var next = currentIndex + move;
+    if (next >= items.length) {
+      next = 0;
+    } else if (next < 0) {
+      next = items.length - 1;
+    }
     var targetElement = items[next];
-    targetElement.focus();
-    targetElement.scrollIntoView({ block: 'center' });
-    localStorage.setItem('listfocused', next);
+    if (targetElement) {
+      targetElement.focus();
+      targetElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      localStorage.setItem('listfocused', next);
+    }
   }
 }
 
